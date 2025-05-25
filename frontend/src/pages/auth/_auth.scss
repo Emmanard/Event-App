@@ -1,0 +1,129 @@
+#auth-page-right {
+    padding-top: 100px;
+    min-height: 90vh;
+    display: flex;
+
+    .container {
+        .row {
+            .col {
+
+                .card {
+                    flex: 1 0 auto;
+                    overflow: hidden;
+
+
+                    .row {
+                        height: 100%;
+
+                        .col:nth-child(1) {
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+
+                        }
+
+                        .col:nth-child(2) {
+                            background-image: url('../../assets/pictures/auth/login.png');
+                            background-position: center;
+                            background-size: cover;
+                            background-repeat: no-repeat;
+                            position: relative;
+
+                            .row {
+
+                                &::after {
+                                    content: "";
+                                    position: absolute;
+                                    width: 100%;
+                                    z-index: 1;
+                                    height: 100%;
+                                    background-color: rgba($color: #000000, $alpha: 0.3);
+                                }
+
+                                .col-9 {
+                                    z-index: 2;
+
+                                    h1 {
+                                        text-transform: uppercase;
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+            }
+
+        }
+    }
+
+}
+
+
+#auth-page-left {
+    padding-top: 100px;
+    min-height: 90vh;
+    display: flex;
+
+    .container {
+        .row {
+            .col {
+
+                .card {
+                    flex: 1 0 auto;
+                    overflow: hidden;
+
+
+                    .row {
+                        height: 100%;
+
+                        .my-4 {
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+
+                            form {
+                                overflow-y: auto;
+                                max-height: 63vh;
+                            }
+
+                        }
+
+                        .text-light {
+                            background-image: url('../../assets/pictures/auth/login.png');
+                            background-position: center;
+                            background-size: cover;
+                            background-repeat: no-repeat;
+                            position: relative;
+
+                            .row {
+
+                                &::after {
+                                    content: "";
+                                    position: absolute;
+                                    width: 100%;
+                                    z-index: 1;
+                                    height: 100%;
+                                    background-color: rgba($color: #000000, $alpha: 0.3);
+                                }
+
+                                .col-9 {
+                                    z-index: 2;
+
+                                    h1 {
+                                        text-transform: uppercase;
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+            }
+
+        }
+    }
+
+}

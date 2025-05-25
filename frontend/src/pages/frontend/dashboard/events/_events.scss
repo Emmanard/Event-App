@@ -1,0 +1,33 @@
+$info: #9accc9;
+$warning: #f5a998;
+
+@import url('https://fonts.googleapis.com/css2?family=Arizonia&family=Dancing+Script:wght@400..700&family=Madimi+One&family=Tilt+Neon&display=swap');
+
+
+#add-events {
+
+    .card {
+        h2 {
+            text-transform: uppercase;
+        }
+    }
+}
+
+.ql-editor {
+    min-height: 200px;
+}
+
+.changeDragger {
+    background-color: red !important;
+    width: fit-content;
+
+    span {
+        padding: 0;
+    }
+}
+
+.event-modal {
+    .ant-modal-content {
+        padding: 3% 2%;
+    }
+}

@@ -1,0 +1,23 @@
+$info: #9accc9;
+$warning: #f5a998;
+
+#comment-text-card {
+    .d-flex {
+        div {
+            .btn-sm {
+                visibility: hidden;
+            }
+        }
+    }
+
+    &:hover {
+        .d-flex {
+            div {
+                .btn-sm {
+                    visibility: visible;
+                }
+            }
+        }
+    }
+
+}

@@ -1,0 +1,24 @@
+#statements-section {
+    padding: 60px 0;
+
+    .container {
+        .row {
+            .col:nth-child(1) {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+
+                h5 {
+                    letter-spacing: 4px;
+                    font-family: monospace;
+                }
+
+                div {
+                    a {
+                        width: fit-content;
+                    }
+                }
+            }
+        }
+    }
+}

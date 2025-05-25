@@ -1,0 +1,66 @@
+$info: #9accc9;
+
+#background-banner {
+    background-image: url(../../assets/pictures/hero-section/four.png);
+    height: 60vh;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        z-index: 1;
+        background-color: rgba($color: #000000, $alpha: 0.5);
+    }
+
+    .container {
+        height: 100%;
+        display: flex;
+
+        .row {
+            z-index: 4;
+            flex: 1;
+            color: white;
+
+            .col {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                text-align: center;
+
+                h4 {
+                    font-family: monospace;
+                    letter-spacing: 6px;
+                    text-transform: uppercase;
+                    font-weight: bold;
+                }
+
+                h1 {
+                    font-weight: 900;
+                    text-transform: uppercase;
+                }
+
+                h6 {
+                    position: absolute;
+                    bottom: 8%;
+
+                    span {
+                        a {
+                            &:hover {
+                                text-decoration: underline !important;
+                                text-decoration-color: $info !important;
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+}

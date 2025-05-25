@@ -1,0 +1,15 @@
+#dashboardHeader-section {
+    .container {
+        .d-flex {
+            .nav-item {
+                input {
+                    padding-left: 8px;
+
+                    &::placeholder {
+                        color: #6c757d;
+                    }
+                }
+            }
+        }
+    }
+}

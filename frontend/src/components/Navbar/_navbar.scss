@@ -1,0 +1,71 @@
+$info: #9accc9;
+$warning: #f5a998;
+
+.navbar-expand-lg {
+    .container {
+        .navbar-collapse {
+            .navbar-nav {
+                .nav-item {
+                    .nav-link {
+                        font-family: "Baloo Bhaijaan 2", sans-serif;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+.navbar-absolute {
+    position: absolute;
+    padding: 10px 0;
+    width: 100%;
+    top: 0;
+    z-index: 100;
+    background-color: transparent;
+
+}
+
+.navbar-fixed {
+    position: fixed;
+    transition: all 0.3s ease-in-out;
+    width: 100%;
+    top: 0;
+    z-index: 100;
+    background-color: rgba($color: #fff, $alpha: 0.9) !important;
+    backdrop-filter: blur(15px) !important;
+
+}
+
+
+.navbar-bg {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    background-color: rgba($color: #fff, $alpha: 0.9) !important;
+    backdrop-filter: blur(15px) !important;
+}
+
+.navbar-background {
+    background-color: rgba($color: #fff, $alpha: 0.9) !important;
+    backdrop-filter: blur(15px) !important;
+
+}
+
+
+// profileMenu-section
+#profileMenu-section {
+    button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        
+        span {
+            display: flex;
+            &:nth-child(1) {
+                padding-right: 10px;
+            }
+        }
+    }
+}
