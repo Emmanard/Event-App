@@ -1,13 +1,6 @@
-// config/Cloudinary.js
-import { Cloudinary } from '@cloudinary/url-gen';
+import { post } from '../http';
 
-const cloudinary = new Cloudinary({
-  cloud: {
-    cloudName: process.env.REACT_APP_CLOUDINARY_CLOUD_NAME
-  }
-});
-
-// Utility function for image upload
+// Upload image to Cloudinary
 export const uploadToCloudinary = async (file, folder = 'users') => {
   const formData = new FormData();
   formData.append('file', file);
@@ -22,7 +15,7 @@ export const uploadToCloudinary = async (file, folder = 'users') => {
         body: formData,
       }
     );
-    
+
     const data = await response.json();
     return {
       url: data.secure_url,
@@ -36,18 +29,9 @@ export const uploadToCloudinary = async (file, folder = 'users') => {
 // Delete image from Cloudinary
 export const deleteFromCloudinary = async (publicId) => {
   try {
-    const response = await fetch('/api/delete-image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ publicId }),
-    });
-    
-    return await response.json();
+    const response = await post('/api/cloudinary/delete', { publicId });
+    return response.data;
   } catch (error) {
     throw new Error('Delete failed: ' + error.message);
   }
 };
-
-export default cloudinary;

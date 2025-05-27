@@ -5,10 +5,10 @@ import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 import { useEffect, useState } from "react";
 import PersonalDetails from "./PersonalDetails";
 import ChangePassword from "./ChangePassword";
-import { getUser, updateUser } from "services/auth";
+import {  updateUser } from "services/auth";
 import LoadingIndicator from "components/LoadingIndicator";
 import { useAuthContext } from "context/AuthContext";
-import { uploadToCloudinary, deleteFromCloudinary } from "config/Cloudinary";
+import { uploadToCloudinary, deleteFromCloudinary } from "services/cloudinary";
 
 const initialLinks = {
   facebookLink: "",
@@ -122,7 +122,7 @@ export default function EditProfile() {
   const handleImageChange = async (e) => {
     const image = e.target.files[0];
     let results = window.verifyImageSize(image);
-    
+
     if (results) {
       setImgLoading(true);
       setImgProgress(20);
@@ -136,13 +136,13 @@ export default function EditProfile() {
         setImgProgress(50);
 
         // Upload new image to Cloudinary
-        const uploadResult = await uploadToCloudinary(image, 'users');
-        
+        const uploadResult = await uploadToCloudinary(image, "users");
+
         setImgProgress(80);
 
         // Update user profile with new image
         await uploadProfileImg(uploadResult.url, uploadResult.publicId);
-        
+
         setImgProgress(100);
       } catch (error) {
         window.toastify(error.message, "error");
@@ -155,9 +155,9 @@ export default function EditProfile() {
 
   const uploadProfileImg = async (imageUrl, publicId) => {
     try {
-      let { data } = await updateUser(user?._id, { 
+      let { data } = await updateUser(user?._id, {
         image: imageUrl,
-        imagePublicId: publicId // Store publicId for future deletion
+        imagePublicId: publicId, // Store publicId for future deletion
       });
 
       window.toastify(data.msg, "success");
@@ -200,7 +200,10 @@ export default function EditProfile() {
                 <div id="profileImage">
                   {imgLoading ? (
                     <div className="text-center">
-                      <Progress type="circle" percent={Math.round(imgProgress)} />
+                      <Progress
+                        type="circle"
+                        percent={Math.round(imgProgress)}
+                      />
                     </div>
                   ) : (
                     <Avatar

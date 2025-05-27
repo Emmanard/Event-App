@@ -1,43 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { delEvent, getMyEvents, updateEvent } from 'services/event';
-import { Popconfirm, Switch } from 'antd';
-import { Button, Input, Space, Table,  } from 'antd';
+import { Popconfirm, Switch, Button, Input, Space, Table } from 'antd';
 import Highlighter from 'react-highlight-words';
 import { SearchOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import DeleteTwoToneIcon from '@mui/icons-material/DeleteTwoTone';
 import EditTwoToneIcon from '@mui/icons-material/EditTwoTone';
-import { useNavigate } from 'react-router-dom';
 import VisibilityTwoToneIcon from '@mui/icons-material/VisibilityTwoTone';
+import { useNavigate } from 'react-router-dom';
 import ViewEvent from './ViewEvent';
 import CancelEvent from './CancelEvent';
-
-// Cloudinary delete function
-const deleteFromCloudinary = async (imageUrl) => {
-  try {
-    // Extract public_id from Cloudinary URL
-    if (!imageUrl || !imageUrl.includes("cloudinary.com")) {
-      return true; // If not a Cloudinary URL, skip deletion
-    }
-    
-    const urlParts = imageUrl.split('/');
-    const filename = urlParts[urlParts.length - 1];
-    const publicId = `events/${filename.split('.')[0]}`; // Assuming images are in 'events' folder
-    
-    // Call your backend endpoint for secure deletion
-    const response = await fetch('/api/cloudinary/delete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ publicId }),
-    });
-    
-    return response.ok;
-  } catch (error) {
-    console.error('Delete failed:', error);
-    return false;
-  }
-};
+import { deleteFromCloudinary } from 'services/cloudinary';
 
 export default function MyEvents() {
     const [events, setEvents] = useState([]);
@@ -52,35 +24,37 @@ export default function MyEvents() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        window.scroll(0, 0)
+        window.scroll(0, 0);
         getEvents();
-    }, [])
+    }, []);
+
+    const handleError = (error, defaultMsg = "Some error occurred") => {
+        const { status, data } = error.response || {};
+        const msg = [400, 401, 404, 413, 500].includes(status) 
+            ? (data?.message || data?.msg) 
+            : defaultMsg;
+        window.toastify(msg, "error");
+    };
 
     const getEvents = async () => {
-        setIsLoading(true)
+        setIsLoading(true);
         try {
-            let { data } = await getMyEvents();
-            setEvents(data?.data)
-
+            const { data } = await getMyEvents();
+            setEvents(data?.data);
         } catch (error) {
             console.log(error);
-            let msg = "Some error occured";
-            let { status, data } = error.response;
-            if (status == 400 || status == 401 || status == 500 || status == 413 || status === 404) {
-                msg = data.message || data.msg;
-                window.toastify(msg, "error");
-            }
+            handleError(error);
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
+    };
 
-    // table search
     const handleSearch = (selectedKeys, confirm, dataIndex) => {
         confirm();
         setSearchText(selectedKeys[0]);
         setSearchedColumn(dataIndex);
     };
+
     const handleReset = (clearFilters) => {
         clearFilters();
         setSearchText('');
@@ -88,12 +62,7 @@ export default function MyEvents() {
 
     const getColumnSearchProps = (dataIndex) => ({
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters, close }) => (
-            <div
-                style={{
-                    padding: 8,
-                }}
-                onKeyDown={(e) => e.stopPropagation()}
-            >
+            <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
                 <Input
                     ref={searchInput}
                     placeholder={`Search ${dataIndex}`}
@@ -103,7 +72,7 @@ export default function MyEvents() {
                     style={{
                         borderColor: "#9accc9",
                         marginBottom: 8,
-                        boxShadow: "0px 0px 2px #9accc9 ",
+                        boxShadow: "0px 0px 2px #9accc9",
                         display: 'block',
                     }}
                 />
@@ -113,112 +82,58 @@ export default function MyEvents() {
                         onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
                         icon={<SearchOutlined />}
                         size="small"
-                        style={{
-                            width: 90,
-                            backgroundColor: "#9accc9"
-                        }}
+                        style={{ width: 90, backgroundColor: "#9accc9" }}
                     >
                         Search
                     </Button>
-                    <Button
-                        onClick={() => clearFilters && handleReset(clearFilters)}
-                        size="small"
-                        style={{
-                            width: 90,
-                        }}
-                    >
+                    <Button onClick={() => clearFilters && handleReset(clearFilters)} size="small" style={{ width: 90 }}>
                         Reset
                     </Button>
-                    <Button
-                        type="link"
-                        size="small"
-                        className='text-warning'
-                        onClick={() => {
-                            close();
-                        }}
-                    >
+                    <Button type="link" size="small" className='text-warning' onClick={close}>
                         close
                     </Button>
                 </Space>
             </div>
         ),
-        filterIcon: (filtered) => (
-            <SearchOutlined
-                style={{
-                    color: filtered ? '#1677ff' : undefined,
-                }}
-            />
-        ),
-        onFilter: (value, record) =>
-            record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()),
+        filterIcon: (filtered) => <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />,
+        onFilter: (value, record) => record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()),
         onFilterDropdownOpenChange: (visible) => {
-            if (visible) {
-                setTimeout(() => searchInput.current?.select(), 100);
-            }
+            if (visible) setTimeout(() => searchInput.current?.select(), 100);
         },
-        render: (text) =>
-            searchedColumn === dataIndex ? (
+        render: (text) => {
+            const displayText = dataIndex === "date" ? text?.split('T')[0] : text;
+            return searchedColumn === dataIndex ? (
                 <Highlighter
-                    highlightStyle={{
-                        backgroundColor: '#ffc069',
-                        padding: 0,
-                    }}
+                    highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
                     searchWords={[searchText]}
                     autoEscape
-                    textToHighlight={text ? dataIndex === "date" ? text?.toString()?.split('T')[0] : text.toString() : ''}
+                    textToHighlight={displayText?.toString() || ''}
                 />
-            ) : (
-                dataIndex === "date" ? text?.split('T')[0] : text
-
-            ),
+            ) : displayText;
+        },
     });
 
+    const baseColumns = [
+        { title: 'Title', dataIndex: 'title', key: 'title' },
+        { title: 'Category', dataIndex: 'category', key: 'category' },
+        { title: 'Country', dataIndex: 'country', key: 'country' },
+        { title: 'City', dataIndex: 'city', key: 'city' },
+        { title: 'Date', dataIndex: 'date', key: 'date' },
+    ];
+
     const columns = [
-        {
-            title: 'Title',
-            dataIndex: 'title',
-            key: 'title',
-            ...getColumnSearchProps('title'),
-        },
-        {
-            title: 'Category',
-            dataIndex: 'category',
-            key: 'category',
-            ...getColumnSearchProps('category'),
-        },
-        {
-            title: 'Country',
-            dataIndex: 'country',
-            key: 'country',
-            ...getColumnSearchProps('country'),
-        },
-        {
-            title: 'City',
-            dataIndex: 'city',
-            key: 'city',
-            ...getColumnSearchProps('city'),
-        },
-        {
-            title: 'Date',
-            dataIndex: 'date',
-            key: 'date',
-            ...getColumnSearchProps('date'),
-        },
+        ...baseColumns.map(col => ({ ...col, ...getColumnSearchProps(col.dataIndex) })),
         {
             title: 'Views',
             dataIndex: 'views',
             key: 'views',
-            render: (views) => (
-                <div> {views?.length}</div>
-            )
+            render: (views) => views?.length || 0
         },
         {
             title: 'Likes',
             dataIndex: 'likes',
             key: 'likes',
-            render: (likes) => (
-                <div> {likes?.length}</div>
-            )
+            render: (likes) => likes?.length || 0
         },
         {
             title: 'Status',
@@ -229,129 +144,130 @@ export default function MyEvents() {
         {
             title: 'Actions',
             key: 'actions',
-            render: (_, record) => (
-                <div className='d-flex justify-content-evenly align-items-center'>
-                    <Switch className='ms-1' unCheckedChildren={record.status !== "Published" && record.status} id='status' disabled={record.status === "Closed" ? true : false} loading={statusLoading} checkedChildren="Active" size='small' checked={record.status === "Published" ? true : false} onChange={() => handleStatus(record)} />                   
-                    <Button type='dashed' onClick={() => {
-                        setOpenModal(true)
-                        setModalEventId(record?._id)
-                    }}
-                        className='ms-1 d-flex align-items-center justify-content-center'>
-                        <VisibilityTwoToneIcon fontSize='small' />
-                    </Button>
-                    <Button type='default' disabled={record.status === "Closed" ? true : false} onClick={() => navigate(`/dashboard/events/edit/${record?._id}`)} className='ms-1 d-flex align-items-center justify-content-center'>
-                        <EditTwoToneIcon fontSize='small' />
-                    </Button>
-                    <Space size="middle" className='ms-1'>
+            render: (_, record) => {
+                const isClosed = record.status === "Closed";
+                const isPublished = record.status === "Published";
+                
+                return (
+                    <div className='d-flex justify-content-evenly align-items-center'>
+                        <Switch 
+                            className='ms-1' 
+                            unCheckedChildren={!isPublished && record.status}
+                            disabled={isClosed}
+                            loading={statusLoading}
+                            checkedChildren="Active"
+                            size='small'
+                            checked={isPublished}
+                            onChange={() => handleStatus(record)}
+                        />
+                        <Button 
+                            type='dashed' 
+                            onClick={() => { setOpenModal(true); setModalEventId(record?._id); }}
+                            className='ms-1 d-flex align-items-center justify-content-center'
+                        >
+                            <VisibilityTwoToneIcon fontSize='small' />
+                        </Button>
+                        <Button 
+                            type='default' 
+                            disabled={isClosed}
+                            onClick={() => navigate(`/dashboard/events/edit/${record?._id}`)}
+                            className='ms-1 d-flex align-items-center justify-content-center'
+                        >
+                            <EditTwoToneIcon fontSize='small' />
+                        </Button>
                         <Popconfirm
                             title="Delete the event"
                             description="Are you sure you want to delete this event? This action will cancel the event for all attendees."
-                            icon={
-                                <QuestionCircleOutlined
-                                    style={{
-                                        color: 'red',
-                                    }}
-                                />
-                            }
+                            icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
                             onConfirm={() => handleDelEvent(record)}
                             okType='danger'
                             okText="Yes"
                             cancelText="No"
                         >
-                            <Button danger className='d-flex align-items-center justify-content-center'>
+                            <Button danger className='ms-1 d-flex align-items-center justify-content-center'>
                                 <DeleteTwoToneIcon fontSize='small' />
                             </Button>
                         </Popconfirm>
-                    </Space>
-                </div>
-
-            ),
+                    </div>
+                );
+            },
         },
     ];
 
     const handleStatus = async (record) => {
-        let status;
-        if (record?.status === "Published") {
-            status = "Draft"
-        } else if (record?.status === "Draft") {
-            status = "Published"
+        const statusMap = { "Published": "Draft", "Draft": "Published" };
+        const newStatus = statusMap[record?.status];
+
+        if (!newStatus) {
+            return window.toastify(`Event is ${record?.status}. You can't change status`, "error");
         }
 
-        if (status === undefined) {
-            return window.toastify(`Event is ${record?.status}. You can't change status`, "error")
-        }
-
-        setStatusLoading(true)
+        setStatusLoading(true);
         try {
-            let { data } = await updateEvent(record?._id, { status });
+            const { data } = await updateEvent(record?._id, { status: newStatus });
             window.toastify(data?.msg, "success");
         } catch (error) {
             console.log(error);
-            let msg = "Some error occured";
-            let { status, data } = error.response;
-            if (status == 400 || status == 401 || status == 500 || status == 413) {
-                msg = data.message || data.msg;
-                window.toastify(msg, "error");
-            }
+            handleError(error);
         } finally {
-            getEvents()
-            setStatusLoading(false)
+            getEvents();
+            setStatusLoading(false);
         }
-    }
+    };
+
+    const extractPublicId = (imageUrl) => {
+        if (!imageUrl?.includes("cloudinary.com")) return null;
+        
+        const urlParts = imageUrl.split('/');
+        const uploadIndex = urlParts.findIndex(part => part === 'upload');
+        
+        if (uploadIndex === -1) return null;
+        
+        const pathAfterUpload = urlParts.slice(uploadIndex + 2).join('/');
+        return pathAfterUpload.split('.')[0];
+    };
 
     const handleDelEvent = async (record) => {
         try {
-            // Delete image from Cloudinary first (if it exists)
+            // Delete image from Cloudinary if exists
             if (record?.image) {
-                const deleteSuccess = await deleteFromCloudinary(record.image);
-                if (!deleteSuccess) {
-                    console.warn('Failed to delete image from Cloudinary, proceeding with event deletion');
+                const publicId = extractPublicId(record.image);
+                if (publicId) {
+                    try {
+                        await deleteFromCloudinary(publicId);
+                    } catch (cloudinaryError) {
+                        console.warn('Failed to delete image from Cloudinary, proceeding with event deletion:', cloudinaryError);
+                    }
                 }
             }
             
-            // Delete the event from database
-            let { data } = await delEvent(record?._id);
-            getEvents()
+            const { data } = await delEvent(record?._id);
+            getEvents();
             window.toastify(data?.msg, "success");
-            
         } catch (error) {
             console.log(error);
-            let msg = "Some error occured";
-            let { status, data } = error.response;
-            if (status == 400 || status == 401 || status == 500 || status == 413) {
-                msg = data.message || data.msg;
-                window.toastify(msg, "error");
-            }
+            handleError(error);
         }
-    }
+    };
 
     return (
         <div className="container">
             <h2 className='heading-stylling mb-5 pt-4'>MY EVENTS</h2>
             <div className="row">
                 <div className="col" style={{ overflow: "auto" }}>
-                    {
-                        isLoading
-                            ? <div className='my-5 text-center'>
-                                <div className="spinner-grow spinner-grow-sm bg-info"></div>
-                                <div className="spinner-grow spinner-grow-sm bg-warning mx-3"></div>
-                                <div className="spinner-grow spinner-grow-sm bg-info"></div>
-                            </div>
-                            : <Table columns={columns} dataSource={events} />
-                    }
-
+                    {isLoading ? (
+                        <div className='my-5 text-center'>
+                            <div className="spinner-grow spinner-grow-sm bg-info"></div>
+                            <div className="spinner-grow spinner-grow-sm bg-warning mx-3"></div>
+                            <div className="spinner-grow spinner-grow-sm bg-info"></div>
+                        </div>
+                    ) : (
+                        <Table columns={columns} dataSource={events} />
+                    )}
                 </div>
             </div>
-            <div className="row">
-                <div className="col">
-                    {openModal && <ViewEvent open={openModal} setOpen={setOpenModal} id={modalEventId} />}
-                </div>
-            </div>
-            <div className="row">
-                <div className="col">
-                    {openCancelModal && <CancelEvent open={openCancelModal} setOpen={setOpenCancelModal} id={modalEventId} />}
-                </div>
-            </div>
+            {openModal && <ViewEvent open={openModal} setOpen={setOpenModal} id={modalEventId} />}
+            {openCancelModal && <CancelEvent open={openCancelModal} setOpen={setOpenCancelModal} id={modalEventId} />}
         </div>
-    )
+    );
 }
