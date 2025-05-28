@@ -261,7 +261,8 @@ export default function AddEvent() {
                     size="large"
                     placeholder="Select Category"
                     filterOption={filterOption}
-                    options={window?.categories?.map((item) => ({
+                    options={window?.categories?.map((item, index) => ({
+                      key: `${item}-${index}`, // Added key for each option
                       value: item,
                       label: item,
                     }))}
@@ -302,7 +303,8 @@ export default function AddEvent() {
                         size="large"
                         placeholder={`Select ${label}`}
                         filterOption={filterOption}
-                        options={options?.map((item) => ({
+                        options={options?.map((item, index) => ({
+                          key: `${item}-${index}`, // Added key for each option
                           value: item,
                           label: item,
                         }))}

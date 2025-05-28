@@ -358,7 +358,7 @@ export default function EditEvent() {
                       {!state.image ? (
                         <Dragger {...uploadProps}>
                           <p className="ant-upload-drag-icon">
-                            <InboxOutlined />
+                            <InboxOutlined />i
                           </p>
                           <p className="ant-upload-text">
                             Click or drag file to this area to upload

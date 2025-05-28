@@ -40,7 +40,12 @@ export default function MyEvents() {
         setIsLoading(true);
         try {
             const { data } = await getMyEvents();
-            setEvents(data?.data);
+            // Ensure each event has a unique key for the Table component
+            const eventsWithKeys = data?.data?.map(event => ({
+                ...event,
+                key: event._id || event.id // Use _id or id as the key
+            }));
+            setEvents(eventsWithKeys);
         } catch (error) {
             console.log(error);
             handleError(error);
@@ -122,7 +127,12 @@ export default function MyEvents() {
     ];
 
     const columns = [
-        ...baseColumns.map(col => ({ ...col, ...getColumnSearchProps(col.dataIndex) })),
+        // Add explicit keys to mapped columns to avoid React warnings
+        ...baseColumns.map((col, index) => ({ 
+            ...col, 
+            ...getColumnSearchProps(col.dataIndex),
+            key: col.key || `base-col-${index}` // Ensure unique key
+        })),
         {
             title: 'Views',
             dataIndex: 'views',
@@ -262,7 +272,11 @@ export default function MyEvents() {
                             <div className="spinner-grow spinner-grow-sm bg-info"></div>
                         </div>
                     ) : (
-                        <Table columns={columns} dataSource={events} />
+                        <Table 
+                            columns={columns} 
+                            dataSource={events}
+                            rowKey={(record) => record._id || record.key} // Explicit rowKey for Table
+                        />
                     )}
                 </div>
             </div>
