@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import Overview from 'pages/frontend/dashboard/profile/Overview';
-import Activities from './Activities';
+import Activities from './Activities'; 
+import MyEvents from '../events/MyEvents';
 import ProfileHeader from './ProfileHeader';
 import { getUser } from 'services/auth';
 import LoadingIndicator from 'components/LoadingIndicator';
@@ -31,15 +32,15 @@ export default function Index() {
         }
     }
 
-
     return (
         <>
             <LoadingIndicator loading={loading} />
-
+            
             <ProfileHeader userData={userData} />
             <Routes>
                 <Route path='/' element={<Overview userData={userData} />} />
                 <Route path='activities' element={<Activities />} />
+                <Route path='events' element={<MyEvents />} /> {/* Use existing MyEvents component */}
             </Routes>
         </>
     )

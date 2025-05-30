@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { delEvent, getMyEvents, updateEvent } from 'services/event';
 import { Popconfirm, Switch, Button, Input, Space, Table } from 'antd';
 import Highlighter from 'react-highlight-words';
@@ -23,11 +23,6 @@ export default function MyEvents() {
     const searchInput = useRef(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        window.scroll(0, 0);
-        getEvents();
-    }, []);
-
     const handleError = (error, defaultMsg = "Some error occurred") => {
         const { status, data } = error.response || {};
         const msg = [400, 401, 404, 413, 500].includes(status) 
@@ -36,7 +31,8 @@ export default function MyEvents() {
         window.toastify(msg, "error");
     };
 
-    const getEvents = async () => {
+    // Wrap getEvents in useCallback to memoize it
+    const getEvents = useCallback(async () => {
         setIsLoading(true);
         try {
             const { data } = await getMyEvents();
@@ -52,7 +48,12 @@ export default function MyEvents() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []); // Empty dependency array since getEvents doesn't depend on any props or state
+
+    useEffect(() => {
+        window.scroll(0, 0);
+        getEvents();
+    }, [getEvents]); // Now include getEvents in the dependency array
 
     const handleSearch = (selectedKeys, confirm, dataIndex) => {
         confirm();

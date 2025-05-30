@@ -143,9 +143,9 @@ export default function EditEvent() {
   const formatFormData = (values) => ({
     ...values,
     date: moment(values?.date?.$d).format("YYYY-MM-DD"),
-    time: values?.time?.map((item) => moment(item.$d).format("HH:mm")),
+    time: values?.time?.map((item, index) => moment(item.$d).format("HH:mm")),
     ticketPrice: Math.floor(Number(values?.ticketPrice) * (1 + state.taxRate)),
-    schedule: values?.schedule?.map((item) => ({
+    schedule: values?.schedule?.map((item, index) => ({
       time: moment(item?.time.$d).format("HH:mm"),
       details: item.details,
     })),
@@ -190,11 +190,11 @@ export default function EditEvent() {
       ...eventData,
       date: eventData.date ? dayjs(eventData.date) : null,
       time: timeRange,
-      schedule: eventData.schedule?.map((item) => ({
+      schedule: eventData.schedule?.map((item, index) => ({
         time: dayjs(item.time, "HH:mm"),
         details: item.details,
       })),
-      speakers: eventData.speakers?.map((item) => ({
+      speakers: eventData.speakers?.map((item, index) => ({
         name: item.name,
         details: item.details,
         profession: item.profession,
@@ -204,7 +204,7 @@ export default function EditEvent() {
   };
 
   const createSelectOptions = (items) =>
-    items?.map((item) => ({ value: item, label: item })) || [];
+    items?.map((item, index) => ({ value: item, label: item, key: index })) || [];
 
   const FormInput = ({ label, name, rules, ...props }) => (
     <Form.Item label={label} name={name} rules={rules}>
@@ -358,7 +358,7 @@ export default function EditEvent() {
                       {!state.image ? (
                         <Dragger {...uploadProps}>
                           <p className="ant-upload-drag-icon">
-                            <InboxOutlined />i
+                            <InboxOutlined />
                           </p>
                           <p className="ant-upload-text">
                             Click or drag file to this area to upload
@@ -372,7 +372,7 @@ export default function EditEvent() {
                         <div className="text-center">
                           <img
                             src={state.image}
-                            alt="Event Picture"
+                            alt="Event"
                             className="img-fluid"
                             style={{ maxHeight: "400px", objectFit: "contain" }}
                           />
