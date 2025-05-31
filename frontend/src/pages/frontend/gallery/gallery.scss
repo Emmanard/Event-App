@@ -1,0 +1,235 @@
+$info: #9accc9;
+$warning: #f5a998;
+
+#gallery-section {
+    min-height: 70vh;
+    padding: 120px 0 60px;
+    position: relative;
+
+    .container {
+        position: relative;
+        z-index: 2;
+
+        .row:first-child {
+            margin-bottom: 60px;
+            
+            .col {
+                text-align: center;
+                
+                h5 {
+                    color: $warning;
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                    margin-bottom: 10px;
+                }
+            }
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+
+            .gallery-item {
+                position: relative;
+                overflow: hidden;
+                border-radius: 15px;
+                box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 20px;
+                transition: all 0.4s ease;
+                background: linear-gradient(135deg, rgba($info, 0.1), rgba($warning, 0.05));
+
+                &:hover {
+                    transform: translateY(-10px);
+                    box-shadow: rgba(0, 0, 0, 0.2) 0px 20px 40px;
+
+                    .gallery-img {
+                        transform: scale(1.1);
+                    }
+
+                    .gallery-overlay {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .gallery-img {
+                    width: 100%;
+                    height: 250px;
+                    object-fit: cover;
+                    transition: all 0.4s ease;
+                }
+
+                .gallery-overlay {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+                    color: white;
+                    padding: 30px 20px 20px;
+                    opacity: 0;
+                    transform: translateY(20px);
+                    transition: all 0.4s ease;
+
+                    h5 {
+                        margin-bottom: 5px;
+                        font-weight: 600;
+                    }
+
+                    p {
+                        font-size: 0.9rem;
+                        opacity: 0.9;
+                        margin: 0;
+                    }
+                }
+            }
+        }
+
+        .coming-soon-card {
+            background: linear-gradient(135deg, rgba($info, 0.1), rgba($warning, 0.1));
+            border: 2px dashed $info;
+            border-radius: 20px;
+            padding: 80px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+
+            &::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: radial-gradient(circle, rgba($info, 0.1) 0%, transparent 70%);
+                animation: pulse 3s ease-in-out infinite;
+            }
+
+            .content {
+                position: relative;
+                z-index: 2;
+
+                .icon {
+                    font-size: 4rem;
+                    color: $info;
+                    margin-bottom: 20px;
+                    opacity: 0.7;
+                }
+
+                h3 {
+                    color: #333;
+                    margin-bottom: 15px;
+                    font-weight: 600;
+                }
+
+                p {
+                    color: #666;
+                    font-size: 1.1rem;
+                    margin: 0;
+                }
+            }
+        }
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 10%;
+        right: -5%;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba($warning, 0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        z-index: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.2;
+    }
+}
+
+// Filter tabs styling
+.gallery-filters {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+
+    .filter-btn {
+        padding: 12px 25px;
+        border: 2px solid $info;
+        background: transparent;
+        color: $info;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+
+        &:hover,
+        &.active {
+            background: $info;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba($info, 0.3);
+        }
+    }
+}
+
+@media only screen and (max-width: 768px) {
+    #gallery-section {
+        padding: 100px 0 40px;
+
+        .container {
+            .gallery-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+
+                .gallery-item {
+                    .gallery-img {
+                        height: 200px;
+                    }
+                }
+            }
+
+            .coming-soon-card {
+                padding: 60px 20px;
+
+                .content {
+                    .icon {
+                        font-size: 3rem;
+                    }
+
+                    h3 {
+                        font-size: 1.3rem;
+                    }
+
+                    p {
+                        font-size: 1rem;
+                    }
+                }
+            }
+        }
+    }
+
+    .gallery-filters {
+        gap: 10px;
+
+        .filter-btn {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+    }
+}

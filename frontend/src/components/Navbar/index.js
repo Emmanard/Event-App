@@ -13,7 +13,6 @@ export default function Index() {
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const { isAuthenticated, user } = useAuthContext();
 
-
     const expandButtonRef = useRef()
 
     const navbarScrolling = () => {
@@ -23,7 +22,12 @@ export default function Index() {
             setNavBarScroll(false)
         }
     }
-    window.addEventListener('scroll', navbarScrolling)
+    
+    useEffect(() => {
+        window.addEventListener('scroll', navbarScrolling)
+        return () => window.removeEventListener('scroll', navbarScrolling)
+    }, [])
+
     useEffect(() => {
         let collapsed = expandButtonRef.current.getAttribute("aria-expanded")
         setNavbarCollapsed(JSON.parse(collapsed));
@@ -48,7 +52,7 @@ export default function Index() {
                                 <Link className="nav-link" to="/about">About</Link>
                             </li>
                             <li className="nav-item mx-2">
-                                <a className="nav-link" href="#">Upcoming</a>
+                                <Link className="nav-link" to="/upcoming">Upcoming</Link>
                             </li>
                             <li className="nav-item mx-2 dropdown" onMouseOver={() => setDropdownOpen(true)} onMouseLeave={() => setDropdownOpen(false)}>
                                 <a className={`nav-link dropdown-toggle ${dropdownOpen ? "show" : ""}`} href="#"  data-bs-toggle="dropdown" aria-expanded={dropdownOpen ? "true" : "false"}>
@@ -56,18 +60,18 @@ export default function Index() {
                                 </a>
                                 <ul className={`dropdown-menu pt-0 rounded-0 border-0 shadow ${dropdownOpen ? "show" : ""}`} data-bs-popper="static">
                                     {window?.categories?.map((item, i) => {
-                                        return <li key={i}><a className="dropdown-item" href="#">{item}</a></li>
+                                        return <li key={i}><Link className="dropdown-item" to={`/category/${item.toLowerCase().replace(/\s+/g, '-')}`}>{item}</Link></li>
                                     })}
                                 </ul>
                             </li>
                             <li className="nav-item mx-2">
-                                <a className="nav-link" aria-disabled="true">Gallery</a>
+                                <Link className="nav-link" to="/gallery">Gallery</Link>
                             </li>
                             <li className="nav-item mx-2">
-                                <a className="nav-link" aria-disabled="true">Blogs</a>
+                                <Link className="nav-link" to="/blogs">Blogs</Link>
                             </li>
                             <li className="nav-item mx-2">
-                                <a className="nav-link" aria-disabled="true">Contact</a>
+                                <Link className="nav-link" to="/contact">Contact</Link>
                             </li>
                         </ul>
                         <div >
