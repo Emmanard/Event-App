@@ -2,7 +2,7 @@ import axios from "axios";
 // import { apiKey } from "./config.json";
 const apiKey = process.env.REACT_APP_APIKEY;
 
-console.log('Client API Key:', apiKey);
+
 
 axios.defaults.headers.post["Content-Type"] = "application/json";
 axios.defaults.headers.put["Content-Type"] = "application/json";
