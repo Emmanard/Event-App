@@ -22,7 +22,11 @@ const {
     getBookmarkedEvents,
     shareEvent,
     removeLike,
-    updateComment
+    updateComment,
+    // Add the new functions to imports
+    getAllEvents,
+    getPopularEventsAll,
+    getPopularEventsSimple
 } = require('../controllers/events');
 const { protect } = require("../middlewares/auth");
 
@@ -44,9 +48,25 @@ router.route("/")
     .get(protect("organizer", "attendee"), getEvent)
     .put(protect("organizer"), updateEvent);
 
-// Get popular events by type
+// Get popular events by type (existing function)
 router.route("/popular/:type")
     .get(getPopularEvents);
+
+// ================================
+// NEW ROUTES FOR GET ALL EVENTS AND POPULAR EVENTS
+// ================================
+
+// Get all events with filtering and pagination
+router.route("/all")
+    .get(getAllEvents);
+
+// Get popular events across all categories (advanced version)
+router.route("/popular")
+    .get(getPopularEventsAll);
+
+// Get popular events across all categories (simple version)
+router.route("/popular-simple")
+    .get(getPopularEventsSimple);
 
 // ================================
 // EVENT INTERACTION ROUTES

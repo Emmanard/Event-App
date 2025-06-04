@@ -55,7 +55,7 @@ const userSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        default: "Draft"
+        default: 'Published'
     },
     seats: {
         type: Number,

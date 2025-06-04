@@ -353,7 +353,7 @@ export const useBlogsData = () => {
 
       const response = await blogApiService.fetchBlogPosts(params);
       
-      console.log('Received response:', response);
+      
       
       setBlogs(response.blogs);
       setCategories(response.categories);

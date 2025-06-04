@@ -1,7 +1,10 @@
 import { post, get, del, put } from "services/http";
 const root = process.env.REACT_APP_EVENT_WAVE_ROOT_URL;
 
-// Existing event APIs
+// ================================
+// EXISTING EVENT APIS (CORE CRUD)
+// ================================
+
 export const addEvent = (body) => {
     return post(`${root}/api/v1/event/add`, body);
 };
@@ -30,12 +33,39 @@ export const getPopularEvents = (type) => {
     return get(`${root}/api/v1/event/popular/${type}`);
 };
 
+// ================================
+// NEW ROUTES FOR GET ALL EVENTS AND POPULAR EVENTS
+// ================================
+
+export const getAllEvents = (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return get(`${root}/api/v1/event/all${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getPopularEventsAll = (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return get(`${root}/api/v1/event/popular${queryString ? `?${queryString}` : ''}`);
+};
+
+export const getPopularEventsSimple = (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return get(`${root}/api/v1/event/popular-simple${queryString ? `?${queryString}` : ''}`);
+};
+
+// ================================
+// EVENT INTERACTIONS
+// ================================
+
 export const addView = (id) => {
     return put(`${root}/api/v1/event/addView?id=${id}`);
 };
 
 export const addLike = (id) => {
     return put(`${root}/api/v1/event/addLike?id=${id}`);
+};
+
+export const removeLike = (id) => {
+    return put(`${root}/api/v1/event/removeLike?id=${id}`);
 };
 
 export const addComment = (id, body) => {
@@ -50,10 +80,22 @@ export const deleteComment = (id) => {
     return del(`${root}/api/v1/event/comment?id=${id}`);
 };
 
-// Enhanced APIs for better category filtering and search
+export const updateComment = (id, body) => {
+    return put(`${root}/api/v1/event/comment/update?id=${id}`, body);
+};
+
+// ================================
+// SEARCH AND DISCOVERY
+// ================================
+
 export const searchEvents = (params) => {
     const queryString = new URLSearchParams(params).toString();
     return get(`${root}/api/v1/event/search?${queryString}`);
+};
+
+export const advancedSearchEvents = (params) => {
+    const queryString = new URLSearchParams(params).toString();
+    return get(`${root}/api/v1/event/advanced-search?${queryString}`);
 };
 
 export const getEventsByCategory = (category, options = {}) => {
@@ -87,10 +129,6 @@ export const getEventCategories = () => {
     return get(`${root}/api/v1/event/categories`);
 };
 
-export const getEventStats = (id) => {
-    return get(`${root}/api/v1/event/stats?id=${id}`);
-};
-
 export const getFeaturedEvents = (limit = 6) => {
     return get(`${root}/api/v1/event/featured?limit=${limit}`);
 };
@@ -98,6 +136,10 @@ export const getFeaturedEvents = (limit = 6) => {
 export const getUpcomingEvents = (limit = 10) => {
     return get(`${root}/api/v1/event/upcoming?limit=${limit}`);
 };
+
+// ================================
+// USER INTERACTIONS
+// ================================
 
 export const reportEvent = (id, reason) => {
     return post(`${root}/api/v1/event/report?id=${id}`, { reason });
@@ -114,6 +156,66 @@ export const getBookmarkedEvents = () => {
 export const shareEvent = (id, platform) => {
     return post(`${root}/api/v1/event/share?id=${id}`, { platform });
 };
+
+// ================================
+// EVENT ATTENDANCE MANAGEMENT
+// ================================
+
+export const attendEvent = (id) => {
+    return post(`${root}/api/v1/event/attend/${id}`);
+};
+
+export const unattendEvent = (id) => {
+    return del(`${root}/api/v1/event/attend/${id}`);
+};
+
+export const getMyAttendedEvents = () => {
+    return get(`${root}/api/v1/event/my-attended`);
+};
+
+// ================================
+// ANALYTICS AND INSIGHTS
+// ================================
+
+export const getEventStats = (id) => {
+    return get(`${root}/api/v1/event/stats?id=${id}`);
+};
+
+export const getEventAnalytics = (id) => {
+    return get(`${root}/api/v1/event/analytics/${id}`);
+};
+
+// ================================
+// PERSONALIZATION
+// ================================
+
+export const getEventRecommendations = (limit = 5) => {
+    return get(`${root}/api/v1/event/recommendations?limit=${limit}`);
+};
+
+// ================================
+// BULK OPERATIONS
+// ================================
+
+export const bulkEventOperations = (action, eventIds) => {
+    return post(`${root}/api/v1/event/bulk`, { action, eventIds });
+};
+
+// ================================
+// EVENT MANAGEMENT UTILITIES
+// ================================
+
+export const cloneEvent = (id) => {
+    return post(`${root}/api/v1/event/clone/${id}`);
+};
+
+export const updateEventStatus = (id, status) => {
+    return put(`${root}/api/v1/event/status/${id}`, { status });
+};
+
+// ================================
+// EXISTING UTILITY FUNCTIONS
+// ================================
 
 // Advanced filtering and sorting utilities
 export const filterEvents = (events, filters) => {
@@ -143,7 +245,7 @@ export const filterEvents = (events, filters) => {
                     if (eventDate.getMonth() !== now.getMonth() || 
                         eventDate.getFullYear() !== now.getFullYear()) return false;
                     break;  
-                    default:
+                default:
                     break;
             }
         }
@@ -168,7 +270,7 @@ export const filterEvents = (events, filters) => {
                 case '100+':
                     if (price < 100) return false;
                     break;
-                      default:
+                default:
                     break;
             }
         }

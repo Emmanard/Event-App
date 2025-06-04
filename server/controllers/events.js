@@ -75,6 +75,237 @@ const getEvent = async (req, res) => {
     }
 }
 
+// Get all events with pagination and filtering
+const getAllEvents = async (req, res) => {
+    try {
+        const { 
+            page = 1, 
+            limit = 10,
+            sortBy = 'newest',
+            status = 'Published',
+            dateFrom,
+            dateTo,
+            category,
+            location
+        } = req.query;
+        
+        // Build query object
+        let query = { status };
+        
+        // Add date filter for upcoming events only (optional)
+        if (dateFrom || dateTo) {
+            query.date = {};
+            if (dateFrom) query.date.$gte = new Date(dateFrom);
+            if (dateTo) query.date.$lte = new Date(dateTo);
+        }
+        
+        // Category filter
+        if (category) {
+            query.category = { $regex: new RegExp(`^${category}$`, 'i') };
+        }
+        
+        // Location filter
+        if (location) {
+            query.$or = [
+                { location: { $regex: location, $options: 'i' } },
+                { city: { $regex: location, $options: 'i' } },
+                { country: { $regex: location, $options: 'i' } }
+            ];
+        }
+        
+        // Sorting options
+        let sort = {};
+        switch (sortBy) {
+            case 'newest':
+                sort = { createdAt: -1 };
+                break;
+            case 'oldest':
+                sort = { createdAt: 1 };
+                break;
+            case 'date-asc':
+                sort = { date: 1 };
+                break;
+            case 'date-desc':
+                sort = { date: -1 };
+                break;
+            case 'popular':
+                sort = { likes: -1, views: -1, createdAt: -1 };
+                break;
+            case 'most-viewed':
+                sort = { views: -1, createdAt: -1 };
+                break;
+            case 'most-liked':
+                sort = { likes: -1, createdAt: -1 };
+                break;
+            default:
+                sort = { createdAt: -1 };
+        }
+        
+        const skip = (page - 1) * limit;
+        
+        const events = await Event.find(query)
+            .populate('addedBy', 'name email')
+            .sort(sort)
+            .skip(skip)
+            .limit(parseInt(limit));
+            
+        const total = await Event.countDocuments(query);
+        
+        res.json({
+            success: true,
+            data: events,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('getAllEvents Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get popular events across all categories
+const getPopularEventsAll = async (req, res) => {
+    try {
+        const { limit = 10, timeframe = 'all' } = req.query;
+        
+        // Build date filter based on timeframe
+        let dateFilter = { status: 'Published' };
+        
+        switch (timeframe) {
+            case 'week':
+                dateFilter.createdAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
+                break;
+            case 'month':
+                dateFilter.createdAt = { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) };
+                break;
+            case 'year':
+                dateFilter.createdAt = { $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) };
+                break;
+            case 'upcoming':
+                dateFilter.date = { $gte: new Date() };
+                break;
+            default:
+                // 'all' - no additional date filter
+                break;
+        }
+        
+        // Use aggregation to calculate popularity score
+        const events = await Event.aggregate([
+            { $match: dateFilter },
+            {
+                $addFields: {
+                    likesCount: { $size: { $ifNull: ["$likes", []] } },
+                    viewsCount: { $size: { $ifNull: ["$views", []] } },
+                    commentsCount: { $size: { $ifNull: ["$comments", []] } },
+                    bookmarksCount: { $size: { $ifNull: ["$bookmarks", []] } },
+                    sharesCount: { $size: { $ifNull: ["$shares", []] } }
+                }
+            },
+            {
+                $addFields: {
+                    // Calculate popularity score: likes * 3 + views * 1 + comments * 2 + bookmarks * 2 + shares * 4
+                    popularityScore: {
+                        $add: [
+                            { $multiply: ["$likesCount", 3] },
+                            { $multiply: ["$viewsCount", 1] },
+                            { $multiply: ["$commentsCount", 2] },
+                            { $multiply: ["$bookmarksCount", 2] },
+                            { $multiply: ["$sharesCount", 4] }
+                        ]
+                    }
+                }
+            },
+            { $sort: { popularityScore: -1, createdAt: -1 } },
+            { $limit: parseInt(limit) },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'addedBy',
+                    foreignField: '_id',
+                    as: 'addedBy',
+                    pipeline: [{ $project: { name: 1, email: 1 } }]
+                }
+            },
+            {
+                $addFields: {
+                    addedBy: { $arrayElemAt: ["$addedBy", 0] }
+                }
+            }
+        ]);
+        
+        res.json({
+            success: true,
+            data: events,
+            message: events.length === 0 ? 'No popular events found' : undefined
+        });
+        
+    } catch (error) {
+        console.error('Error in getPopularEventsAll:', error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error. Please try again later.",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Alternative simpler version of popular events (similar to your existing function)
+const getPopularEventsSimple = async (req, res) => {
+    try {
+        const { limit = 10 } = req.query;
+        
+        const events = await Event.aggregate([
+            { $match: { status: "Published" } },
+            { 
+                $addFields: { 
+                    viewsLength: { $size: { $ifNull: ["$views", []] } },
+                    likesLength: { $size: { $ifNull: ["$likes", []] } }
+                } 
+            },
+            { 
+                $sort: { 
+                    likesLength: -1, 
+                    viewsLength: -1, 
+                    createdAt: -1 
+                } 
+            },
+            { $limit: parseInt(limit) },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'addedBy',
+                    foreignField: '_id',
+                    as: 'addedBy',
+                    pipeline: [{ $project: { name: 1, email: 1 } }]
+                }
+            },
+            {
+                $addFields: {
+                    addedBy: { $arrayElemAt: ["$addedBy", 0] }
+                }
+            }
+        ]);
+        
+        res.json({
+            success: true,
+            data: events,
+            message: events.length === 0 ? 'No popular events found' : undefined
+        });
+        
+    } catch (error) {
+        console.error('Error in getPopularEventsSimple:', error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error. Please try again later.",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 // Update event 
 const updateEvent = async (req, res) => {
     let { id } = req.query;
@@ -156,10 +387,11 @@ const getEventsByCategory = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Category is required' });
         }
         
+        // Use case-insensitive regex instead of converting to lowercase
         let query = { 
-            category: category.toLowerCase(),
+            category: { $regex: new RegExp(`^${category}$`, 'i') }, // Case-insensitive exact match
             status: 'Published',
-            date: { $gte: new Date() } // Only future events
+            date: { $gte: new Date() }
         };
         
         // Date range filter
@@ -194,17 +426,11 @@ const getEventsByCategory = async (req, res) => {
             case 'oldest':
                 sort = { createdAt: 1 };
                 break;
-            case 'date':
+            case 'date-asc':
                 sort = { date: 1 };
                 break;
-            case 'price-low':
-                sort = { ticketPrice: 1 };
-                break;
-            case 'price-high':
-                sort = { ticketPrice: -1 };
-                break;
-            case 'alphabetical':
-                sort = { title: 1 };
+            case 'date-desc':
+                sort = { date: -1 };
                 break;
             case 'popular':
             default:
@@ -234,6 +460,7 @@ const getEventsByCategory = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error('getEventsByCategory Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -696,5 +923,8 @@ module.exports = {
     reportEvent,
     bookmarkEvent,
     getBookmarkedEvents,
-    shareEvent
+    shareEvent,
+        getAllEvents,
+    getPopularEventsAll,
+    getPopularEventsSimple
 };

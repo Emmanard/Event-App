@@ -19,7 +19,7 @@ export default function index() {
         <Route path='/gallery' element={<Gallery />} />
         <Route path='/blogs' element={<Blogs />} />
         <Route path='/contact' element={<Contact />} />
-        <Route path='/categories/:category' element={<Categories />} />
+       <Route path='/category/:category' element={<Categories />} />
         <Route path='/event/details/:id' element={<PrivateRoute Component={EventDetails} />} />
       </Routes>
     </>
