@@ -1,116 +1,152 @@
-// Categories Component Styles
+// Homepage Color Variables
+$info: #9accc9;
+$warning: #f5a998;
+
+// Categories Component Styles - Matching Homepage Design
 #categories-section {
   padding: 2rem 0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  
+  // Adjusted gradient to be consistent with homepage's subtle background
+  background: linear-gradient(135deg, rgba($info, 0.1) 0%, rgba($warning, 0.1) 100%);
+  position: relative;
+
+  // Added subtle background pattern like homepage's #services-section
+  &::after {
+    content: '';
+    position: absolute;
+    background-color: rgba($info, 0.1); // Using $info for consistency
+    width: 60%;
+    height: 80%;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    clip-path: polygon(0% 15%, 15% 15%, 15% 0%, 85% 0%, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0% 85%);
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+  }
+
   .category-subtitle {
-    color: #6c757d;
+    color: rgba($info, 0.8); // Consistent color with homepage text/elements
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 0.5rem;
   }
-  
+
   .category-title {
-    color: #212529;
+    color: #212529; // Keeping a dark color for headings for readability
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 1rem;
-    
+
     @media (max-width: 768px) {
       font-size: 2rem;
     }
   }
-  
+
   .category-count {
-    color: #6c757d;
+    color: rgba($info, 0.7); // Consistent color
     font-size: 1rem;
     margin-bottom: 0;
   }
 }
 
-// Controls Section
+// Controls Section - Homepage Style replication
 .controls-section {
   margin: 2rem 0;
   padding: 1.5rem;
-  background: white;
+  // Replicating the translucent, blurred background with subtle gradient and inner shadow
+  background: linear-gradient(130deg, transparent, rgba($info, 0.3));
+  backdrop-filter: blur(14px);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  
+  box-shadow: rgb(204, 219, 232) 3px 3px 6px 0px inset, rgba(255, 255, 255, 0.5) -3px -3px 6px 1px inset;
+  position: relative;
+  z-index: 3;
+
   .control-group {
     margin-bottom: 1rem;
-    
+
     @media (min-width: 768px) {
       margin-bottom: 0;
     }
   }
-  
+
   .control-label {
     font-weight: 600;
-    color: #495057;
+    color: #495057; // Keeping a dark color for readability
     margin-bottom: 0.5rem;
     display: block;
     font-size: 0.9rem;
   }
-  
+
   .control-select {
-    border: 2px solid #e9ecef;
+    border: 2px solid $warning; // Consistent border color from homepage inputs
     border-radius: 8px;
     padding: 0.75rem;
     font-size: 0.9rem;
     transition: all 0.3s ease;
-    
+    background: rgba(255, 255, 255, 0.9); // Slight transparency for a lighter feel
+
+    &::placeholder {
+      color: #000; // Consistent placeholder color
+    }
+
     &:focus {
-      border-color: #ffc107;
-      box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+      border-color: $info; // Consistent focus color
+      box-shadow: 0 0 0 0.2rem rgba($info, 0.25); // Consistent focus shadow
+      outline: none;
     }
   }
-  
+
   .view-controls {
     display: flex;
     gap: 0.5rem;
     justify-content: flex-end;
     align-items: flex-end;
     height: 100%;
-    
+
     .view-btn {
-      border: 2px solid #e9ecef;
-      background: white;
-      color: #6c757d;
+      border: 2px solid $warning; // Consistent border color
+      background: transparent;
+      color: $warning; // Consistent text color
       padding: 0.75rem;
-      border-radius: 8px;
+      border-radius: 50%;
       transition: all 0.3s ease;
-      
+      width: auto;
+      height: auto;
+
       &:hover {
-        border-color: #ffc107;
-        background: #ffc107;
-        color: white;
+        background-color: $warning; // Consistent hover background
+        color: #000; // Consistent hover text color
+        transform: translateY(-2px); // Consistent hover effect
       }
-      
+
       &.active {
-        border-color: #ffc107;
-        background: #ffc107;
-        color: white;
+        background-color: $warning; // Consistent active state
+        color: #000;
       }
     }
   }
 }
 
-// States
+// States - Homepage Colors
 .loading-state, .error-state, .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  
+
   .spinner-border {
-    color: #ffc107;
+    color: $info; // Consistent spinner color
     width: 3rem;
     height: 3rem;
   }
-  
+
   .loading-text {
     margin-top: 1rem;
-    color: #6c757d;
+    color: rgba($info, 0.8); // Consistent text color
     font-size: 1.1rem;
   }
 }
@@ -120,501 +156,298 @@
     max-width: 400px;
     margin: 0 auto;
   }
-  
+
   .error-icon {
     font-size: 3rem;
-    color: #dc3545;
+    color: $warning; // Consistent error icon color
     margin-bottom: 1rem;
   }
-  
+
   .retry-btn {
     margin-top: 1rem;
+    background: $warning; // Consistent button background
+    border: none;
+    color: #000; // Consistent button text color
+
+    &:hover {
+      background: darken($warning, 10%); // Consistent hover effect
+    }
   }
 }
 
 .empty-state {
   .empty-icon {
     font-size: 4rem;
-    color: #dee2e6;
+    color: rgba($info, 0.3); // Consistent icon color (using $info with transparency for subtle effect)
     margin-bottom: 1rem;
   }
-  
+
   .empty-description {
-    color: #6c757d;
+    color: rgba($info, 0.7); // Consistent text color
     margin: 1rem 0 2rem;
     line-height: 1.6;
   }
-  
+
   .create-event-btn {
     border-radius: 25px;
     padding: 0.75rem 2rem;
     font-weight: 600;
+    background: $warning; // Consistent button background
+    border: none;
+    color: #000; // Consistent button text color
+
+    &:hover {
+      background: darken($warning, 10%); // Consistent hover effect
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba($warning, 0.3); // Consistent button shadow
+    }
   }
 }
 
-// Events Grid
+// Events Grid - Homepage Style
 #categories-events-grid {
   padding: 2rem 0;
-  
+  position: relative;
+  z-index: 2;
+
   .events-container {
     &.grid-view {
       .event-col {
         margin-bottom: 2rem;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
       }
     }
-    
+
     &.list-view {
       .event-col {
         margin-bottom: 1.5rem;
+
+        .event-card {
+          display: flex;
+          flex-direction: row;
+          max-height: none;
+
+          .card-img-container {
+            flex: 0 0 300px;
+
+            .card-img-top {
+              height: 200px;
+              width: 100%;
+              object-fit: cover;
+            }
+          }
+
+          .card-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+
+          @media (max-width: 768px) {
+            flex-direction: column;
+
+            .card-img-container {
+              flex: none;
+            }
+          }
+        }
       }
     }
   }
 }
 
-// Event Cards
+// Event Cards - Homepage PopularEvents Style
 .event-card {
   border: none;
-  border-radius: 16px;
+  border-radius: 1rem;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  cursor: pointer;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 20px;
+  transition: all 0.4s ease;
+  width: 100%;
   height: 100%;
-  
+  position: relative;
+  // Replicating the translucent, blurred background with subtle gradient
+  background: linear-gradient(130deg, transparent, rgba($info, 0.2));
+  backdrop-filter: blur(14px);
+
   &:hover {
     transform: translateY(-8px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px; // Consistent hover shadow
+    cursor: pointer;
   }
-  
-  &.list-card {
-    display: flex;
-    flex-direction: row;
-    max-height: 200px;
-    
-    .card-image-container {
-      flex: 0 0 300px;
-      height: 200px;
-    }
-    
-    .card-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    
-    @media (max-width: 768px) {
-      flex-direction: column;
-      max-height: none;
-      
-      .card-image-container {
-        flex: none;
-        height: 200px;
-      }
-    }
-  }
-  
-  .card-image-container {
+
+  // Image container with seats overlay (matching PopularEvents)
+  .card-img-container {
     position: relative;
     overflow: hidden;
-    
-    .event-image {
+    height: 250px;
+
+    .card-img-top {
       width: 100%;
-      height: 200px;
+      height: 100%;
       object-fit: cover;
-      transition: transform 0.3s ease;
+      transition: all 0.4s ease;
     }
-    
-    .image-overlay {
+
+    // Seats overlay similar to PopularEvents
+    .seats-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
       bottom: 0;
-      background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.1) 0%,
-        rgba(0, 0, 0, 0) 30%,
-        rgba(0, 0, 0, 0) 70%,
-        rgba(0, 0, 0, 0.3) 100%
-      );
+      left: 0;
+      background: $info; // Consistent background color
+      color: #000;
+      padding: 0.5rem 1rem;
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 1rem;
-      opacity: 0;
-      transition: opacity 0.3s ease;
+      align-items: center;
+      font-size: 0.875rem;
+      font-weight: bold;
+      border-radius: 0 10px 0 0;
+      transform: translateY(90px);
+      transition: all 0.3s ease;
+      z-index: 2;
+
+      .seats-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 0.5rem;
+      }
     }
-    
-    &:hover .image-overlay {
-      opacity: 1;
-    }
-    
-    &:hover .event-image {
-      transform: scale(1.05);
-    }
-    
-    .category-badge {
-      background: rgba(255, 193, 7, 0.9);
-      color: #212529;
-      padding: 0.25rem 0.75rem;
+
+    // Price badge in top right
+    .price-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba($warning, 0.95); // Using $warning for price consistency
+      color: #000;
+      padding: 0.5rem 1rem;
       border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.875rem;
+      backdrop-filter: blur(10px);
+
+      &.free {
+        background: rgba($info, 0.95); // Using $info for free events
+        color: #000;
+      }
+    }
+
+    // Category badge in top left
+    .category-badge {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(0, 0, 0, 0.7); // Keeping dark for contrast
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 15px;
       font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       backdrop-filter: blur(10px);
     }
-    
-    .card-actions {
-      display: flex;
-      gap: 0.5rem;
-      
-      .action-btn {
-        background: rgba(255, 255, 255, 0.9);
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.9rem;
-        color: #495057;
+
+    // Gradient overlay like homepage's hero and speaker sections
+    &::before {
+      content: '';
+      position: absolute;
+      transition: 0.5s all ease;
+      background: linear-gradient(90deg, transparent, transparent, rgba($info, 0.6)); // Using $info for gradient consistency
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      z-index: 1;
+    }
+  }
+
+  &:hover {
+    .card-img-top {
+      transform: scale(1.1) rotate(3deg);
+      transition: all 0.4s ease;
+    }
+
+    .card-img-container {
+      .seats-overlay {
+        transform: translateY(0px);
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-        
-        &:hover {
-          background: rgba(255, 255, 255, 1);
-          transform: scale(1.1);
-        }
-        
-        &.like-btn {
-          &:hover {
-            color: #dc3545;
-            background: rgba(220, 53, 69, 0.1);
-          }
-        }
-        
-        &.view-btn {
-          cursor: default;
-          
-          &:hover {
-            color: #007bff;
-            background: rgba(0, 123, 255, 0.1);
-          }
-        }
-        
-        .action-count {
-          margin-left: 0.25rem;
-          font-size: 0.8rem;
-          font-weight: 600;
-        }
+      }
+
+      &::before {
+        opacity: 1;
+        transition: 0.5s all ease;
       }
     }
   }
-  
+
+  // Card body similar to PopularEvents structure
   .card-body {
     padding: 1.5rem;
-    
-    .card-header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1rem;
-      
-      .card-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #212529;
-        margin: 0;
-        flex: 1;
-        margin-right: 1rem;
-        line-height: 1.3;
-      }
-      
-      .price-tag {
-        flex-shrink: 0;
-        
-        .price-paid {
-          background: linear-gradient(135deg, #28a745, #20c997);
-          color: white;
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          font-weight: 700;
-          font-size: 0.9rem;
-        }
-        
-        .price-free {
-          background: linear-gradient(135deg, #ffc107, #fd7e14);
-          color: #212529;
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          font-weight: 700;
-          font-size: 0.9rem;
-        }
-      }
-    }
-    
-    .event-description {
-      color: #6c757d;
-      font-size: 0.95rem;
-      line-height: 1.6;
-      margin-bottom: 1.5rem;
-    }
-    
-    .event-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-      
-      .meta-item {
-        display: flex;
-        align-items: center;
-        color: #6c757d;
-        font-size: 0.9rem;
-        
-        i {
-          margin-right: 0.5rem;
-          color: #ffc107;
-          width: 16px;
-          text-align: center;
-        }
-        
-        span {
-          flex: 1;
-        }
-      }
-    }
-    
-    .card-footer-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+
+    // Date and location row
+    .event-meta-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 1rem;
-      border-top: 1px solid #e9ecef;
-      
-      .stats-group {
-        display: flex;
-        gap: 1rem;
-        
-        .stat-item {
-          display: flex;
-          align-items: center;
-          color: #6c757d;
-          font-size: 0.85rem;
-          
-          i {
-            margin-right: 0.25rem;
-            color: #adb5bd;
-          }
-        }
-      }
-      
-      .book-now-btn {
-        background: linear-gradient(135deg, #ffc107, #fd7e14);
-        border: none;
-        color: #212529;
-        padding: 0.5rem 1.25rem;
-        border-radius: 25px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
+      margin-bottom: 1rem;
+      color: rgba($info, 0.8); // Consistent text color
+      font-size: 0.875rem;
+
+      .date-info {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        
-        &:hover {
-          background: linear-gradient(135deg, #e0a800, #dc6502);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-        }
-        
-        &:active {
-          transform: translateY(0);
-        }
-        
-        i {
-          font-size: 0.8rem;
-        }
-      }
-    }
-  }
-}
 
-// Load More Section
-.load-more-section {
-  margin-top: 3rem;
-  
-  .load-more-container {
-    text-align: center;
-    
-    .load-more-btn {
-      border: 2px solid #ffc107;
-      color: #ffc107;
-      background: transparent;
-      padding: 0.75rem 2rem;
-      font-weight: 600;
-      border-radius: 25px;
-      transition: all 0.3s ease;
-      
-      &:hover:not(:disabled) {
-        background: #ffc107;
-        color: #212529;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
-      }
-      
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    }
-    
-    .pagination-info {
-      margin-top: 1rem;
-      color: #6c757d;
-      font-size: 0.9rem;
-    }
-  }
-}
-
-// Responsive Design
-@media (max-width: 768px) {
-  .controls-section {
-    .control-group {
-      margin-bottom: 1rem;
-    }
-    
-    .view-controls {
-      justify-content: center;
-      margin-top: 1rem;
-    }
-  }
-  
-  .event-card {
-    .card-body {
-      padding: 1rem;
-      
-      .card-header-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-        
-        .card-title {
-          margin-right: 0;
-          font-size: 1.1rem;
-        }
-      }
-      
-      .event-meta {
-        .meta-item {
-          font-size: 0.85rem;
-        }
-      }
-      
-      .card-footer-actions {
-        flex-direction: column;
-        gap: 1rem;
-        align-items: stretch;
-        
-        .stats-group {
-          justify-content: center;
-        }
-        
-        .book-now-btn {
-          justify-content: center;
+        .bx, .fas {
+          color: $warning; // Consistent icon color
+          margin-right: 0.25rem;
         }
       }
     }
-  }
-}
 
-// Animation for card loading
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.event-card {
-  animation: fadeInUp 0.6s ease forwards;
-}
-
-// Staggered animation for multiple cards
-.event-col:nth-child(1) .event-card { animation-delay: 0.1s; }
-.event-col:nth-child(2) .event-card { animation-delay: 0.2s; }
-.event-col:nth-child(3) .event-card { animation-delay: 0.3s; }
-.event-col:nth-child(4) .event-card { animation-delay: 0.4s; }
-.event-col:nth-child(5) .event-card { animation-delay: 0.5s; }
-.event-col:nth-child(6) .event-card { animation-delay: 0.6s; }
-
-// Dark mode support (if needed)
-@media (prefers-color-scheme: dark) {
-  #categories-section {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    
-    .category-title {
-      color: #ecf0f1;
-    }
-    
-    .category-subtitle,
-    .category-count {
-      color: #bdc3c7;
-    }
-  }
-  
-  .controls-section {
-    background: #34495e;
-    
-    .control-label {
-      color: #ecf0f1;
-    }
-    
-    .control-select {
-      background: #2c3e50;
-      border-color: #495057;
-      color: #ecf0f1;
-      
-      &:focus {
-        background: #2c3e50;
-        border-color: #ffc107;
-      }
-    }
-    
-    .view-btn {
-      background: #2c3e50;
-      border-color: #495057;
-      color: #bdc3c7;
-      
-      &:hover,
-      &.active {
-        background: #ffc107;
-        border-color: #ffc107;
-        color: #212529;
-      }
-    }
-  }
-  
-  .event-card {
-    background: #34495e;
-    
     .card-title {
-      color: #ecf0f1;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+
+      a {
+        color: #000; // Keeping dark for readability
+        text-decoration: none;
+
+        &:hover {
+          color: $info; // Consistent hover color
+        }
+      }
     }
-    
-    .event-description {
-      color: #bdc3c7;
+
+    .card-text {
+      font-size: 0.9rem;
+      color: #6c757d; // Keeping a subtle dark for description text
+      margin-bottom: 1.5rem;
+      flex-grow: 1;
     }
-    
-    .card-footer-actions {
-      border-color: #495057;
+
+    .view-details-btn {
+      background: $warning; // Consistent button background
+      border: none;
+      color: #000; // Consistent button text color
+      font-weight: 600;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: darken($warning, 10%); // Consistent hover effect
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba($warning, 0.3); // Consistent button shadow
+      }
     }
   }
 }

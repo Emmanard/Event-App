@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import Navbar from 'components/Navbar'
 import Footer from 'components/Footer'
+import { Link } from 'react-router-dom'
+import './categories.scss'
 import { 
     getEventsByCategory, 
     getAllEvents,
@@ -488,136 +490,162 @@ export default function Categories() {
             </section>
 
             {/* Events Grid */}
-            {!loading && !error && filteredEvents.length > 0 && (
-                <section id="categories-events-grid">
-                    <div className="container">
-                        <div className={`row events-container ${viewMode}-view`}>
-                            {filteredEvents.map((event) => {
-                                const stats = getEventStats(event)
-                                
-                                return (
-                                    <div 
-                                        key={event._id} 
-                                        className={viewMode === 'grid' ? 'col-md-6 col-lg-4 event-col' : 'col-12 event-col'}
+{/* Events Grid - PopularEvents Style */}
+{!loading && !error && filteredEvents.length > 0 && (
+    <section id="categories-events-grid">
+        <div className="container">
+            <div className={`row events-container ${viewMode}-view row-cols-1 row-cols-md-2 row-cols-lg-3 g-4`}>
+                {filteredEvents.map((event) => {
+                    const stats = getEventStats(event)
+                    
+                    return (
+                        <div 
+                            key={event._id} 
+                            className="col d-flex align-items-stretch justify-content-center event-col"
+                        >
+                            <div className="card event-card border-0 shadow rounded-4 w-100 overflow-hidden">
+                                {/* Card Image with Overlays */}
+                                <div className="card-img-container">
+                                    <Link 
+                                        className="card-img text-decoration-none text-body" 
+                                        to={`/event/${event._id}`}
+                                        onClick={() => handleEventClick(event._id)}
                                     >
-                                        <div 
-                                            className={`card event-card ${viewMode === 'list' ? 'list-card' : 'grid-card'}`}
+                                        <img 
+                                            src={event.image || '/default-event-image.jpg'} 
+                                            className="card-img-top" 
+                                            alt={event.title}
+                                            onError={(e) => {
+                                                e.target.src = '/default-event-image.jpg'
+                                            }}
+                                        />
+                                        
+                                        {/* Seats Overlay (similar to PopularEvents) */}
+                                        <div className="seats-overlay d-flex align-items-center">
+                                            <i className="fas fa-users seats-icon"></i>
+                                            <span>
+                                                {event.seats ? 
+                                                    `${event.seats - (event.seatsBooked?.length || 0)} Seats Available` :
+                                                    'Available Seats'
+                                                }
+                                            </span>
+                                        </div>
+                                    </Link>
+                                    
+                                    {/* Price Badge */}
+                                    <div className={`price-badge ${!event.price || event.price === 0 ? 'free' : ''}`}>
+                                        {event.price && event.price > 0 ? `$${event.price}` : 'FREE'}
+                                    </div>
+                                    
+                                    {/* Category Badge */}
+                                    <div className="category-badge">
+                                        {event.category}
+                                    </div>
+                                </div>
+                                
+                                {/* Card Body */}
+                                <div className="card-body d-flex flex-column justify-content-between">
+                                    {/* Date and Location Row */}
+                                    <div className="event-meta-row d-flex justify-content-between mb-3">
+                                        <div className="date-info">
+                                            <i className="bx bx-calendar text-warning me-1"></i>
+                                            <span>{formatDate(event.date)}</span>
+                                        </div>
+                                        <div className="location-info">
+                                            <i className="fas fa-map-marker-alt location-icon me-1"></i>
+                                            <span>{event.location || event.country || 'Location TBD'}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Event Title */}
+                                    <h5 className="card-title">
+                                        <Link 
+                                            to={`/event/${event._id}`}
                                             onClick={() => handleEventClick(event._id)}
+                                            className="text-decoration-none"
                                         >
-                                            {event.image && (
-                                                <div className="card-image-container">
-                                                    <img 
-                                                        src={event.image} 
-                                                        className="card-img-top event-image" 
-                                                        alt={event.title}
-                                                        onError={(e) => {
-                                                            e.target.src = '/default-event-image.jpg'
-                                                        }}
-                                                    />
-                                                    <div className="image-overlay">
-                                                        <span className="category-badge">{event.category}</span>
-                                                        <div className="card-actions">
-                                                            <button
-                                                                className="btn action-btn like-btn"
-                                                                onClick={(e) => handleLikeEvent(event._id, e)}
-                                                                title="Like this event"
-                                                            >
-                                                                <i className="fas fa-heart"></i>
-                                                                <span className="action-count">{stats.likes}</span>
-                                                            </button>
-                                                            <button
-                                                                className="btn action-btn view-btn"
-                                                                title="Views"
-                                                            >
-                                                                <i className="fas fa-eye"></i>
-                                                                <span className="action-count">{stats.views}</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
+                                            {event.title}
+                                        </Link>
+                                    </h5>
+                                    
+                                    {/* Event Description */}
+                                    <p className="event-description">
+                                        {event.description?.substring(0, 100)}
+                                        {event.description?.length > 100 && '...'}
+                                    </p>
+                                    
+                                    {/* Footer Actions */}
+                                    <div className="card-footer-actions d-flex justify-content-between align-items-center mt-4 mb-2">
+                                        <span>
+                                            <Link 
+                                                to={`/event/${event._id}`}
+                                                className="book-now-link"
+                                                onClick={() => handleEventClick(event._id)}
+                                            >
+                                                Book Now
+                                            </Link>
+                                        </span>
+                                        
+                                        <div className="action-buttons">
+                                            {/* Share Button */}
+                                            <button className="btn share-btn btn-sm">
+                                                <i className="fas fa-share-alt share-icon"></i>
+                                            </button>
                                             
-                                            <div className="card-body">
-                                                <div className="card-header-row">
-                                                    <h5 className="card-title">{event.title}</h5>
-                                                    <div className="price-tag">
-                                                        {event.price && event.price > 0 ? (
-                                                            <span className="price-paid">${event.price}</span>
-                                                        ) : (
-                                                            <span className="price-free">FREE</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                
-                                                <p className="card-text event-description">
-                                                    {event.description?.substring(0, 120)}
-                                                    {event.description?.length > 120 && '...'}
-                                                </p>
-                                                
-                                                <div className="event-meta">
-                                                    <div className="meta-item">
-                                                        <i className="fas fa-calendar"></i>
-                                                        <span>{formatDate(event.date)}</span>
-                                                    </div>
-                                                    {event.location && (
-                                                        <div className="meta-item">
-                                                            <i className="fas fa-map-marker-alt"></i>
-                                                            <span>{event.location}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="card-footer-actions">
-                                                    <div className="stats-group">
-                                                        <span className="stat-item">
-                                                            <i className="fas fa-comments"></i>
-                                                            {stats.comments}
-                                                        </span>
-                                                    </div>
-                                                    <button
-                                                        className="btn btn-warning book-now-btn"
-                                                        onClick={(e) => handleBookEvent(event._id, e)}
-                                                    >
-                                                        <i className="fas fa-ticket-alt"></i>
-                                                        Book Now
-                                                    </button>
-                                                </div>
+                                            {/* Like Button */}
+                                            <button 
+                                                className="btn like-btn"
+                                                onClick={(e) => handleLikeEvent(event._id, e)}
+                                                title="Like this event"
+                                            >
+                                                <i className="fas fa-heart"></i>
+                                                <span className="like-count">{stats.likes}</span>
+                                            </button>
+                                            
+                                            {/* View Count */}
+                                            <div className="view-count">
+                                                <i className="fas fa-eye view-icon"></i>
+                                                <span>{stats.views}</span>
                                             </div>
                                         </div>
                                     </div>
-                                )
-                            })}
-                        </div>
-
-                        {/* Load More Button */}
-                        {currentPage < totalPages && (
-                            <div className="row load-more-section">
-                                <div className="col">
-                                    <div className="load-more-container">
-                                        <button 
-                                            className="btn btn-outline-warning load-more-btn"
-                                            onClick={handleLoadMore}
-                                            disabled={loading}
-                                        >
-                                            {loading ? (
-                                                <>
-                                                    <span className="spinner-border spinner-border-sm" role="status"></span>
-                                                    Loading...
-                                                </>
-                                            ) : (
-                                                'Load More Events'
-                                            )}
-                                        </button>
-                                        <p className="pagination-info">
-                                            Showing {filteredEvents.length} of {totalEvents} events
-                                        </p>
-                                    </div>
                                 </div>
                             </div>
-                        )}
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Load More Button */}
+            {currentPage < totalPages && (
+                <div className="row load-more-section">
+                    <div className="col">
+                        <div className="load-more-container">
+                            <button 
+                                className="btn btn-outline-warning load-more-btn"
+                                onClick={handleLoadMore}
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm" role="status"></span>
+                                        Loading...
+                                    </>
+                                ) : (
+                                    'Load More Events'
+                                )}
+                            </button>
+                            <p className="pagination-info">
+                                Showing {filteredEvents.length} of {totalEvents} events
+                            </p>
+                        </div>
                     </div>
-                </section>
+                </div>
             )}
+        </div>
+    </section>
+)}
+           
 
             <Footer />
         </>
