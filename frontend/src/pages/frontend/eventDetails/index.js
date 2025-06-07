@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useParams, NavLink } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import Navbar from 'components/Navbar';
 import Footer from 'components/Footer';
 import './_eventDetails.scss';

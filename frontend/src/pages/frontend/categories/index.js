@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import Navbar from 'components/Navbar'
@@ -8,11 +8,9 @@ import './categories.scss'
 import { 
     getEventsByCategory, 
     getAllEvents,
-    getPopularEvents, 
-    addLike, 
-    addView,
-   
+    getPopularEvents
 } from '../../../services/event/index'
+import moment from 'moment'
 
 export default function Categories() {
     const { category } = useParams()
@@ -55,25 +53,29 @@ export default function Categories() {
         'lifestyle': 'Lifestyle'
     }
 
-    useEffect(() => {
-        window.scroll(0, 0);
-        setCurrentPage(1) // Reset page when category changes
-        fetchCategoryEvents(1) // Fetch from page 1
-    }, [category])
-
-    useEffect(() => {
-        if (currentPage > 1) {
-            fetchCategoryEvents(currentPage)
+    const sortEventsLocally = useCallback((events, sortType) => {
+        switch (sortType) {
+            case 'newest':
+                return [...events].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            case 'oldest':
+                return [...events].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+            case 'date-asc':
+                return [...events].sort((a, b) => new Date(a.date) - new Date(b.date))
+            case 'date-desc':
+                return [...events].sort((a, b) => new Date(b.date) - new Date(a.date))
+            case 'price-low':
+                return [...events].sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+            case 'price-high':
+                return [...events].sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0))
+            case 'alphabetical':
+                return [...events].sort((a, b) => a.title.localeCompare(b.title))
+            case 'popular':
+            default:
+                return [...events].sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0))
         }
-    }, [currentPage])
-
-    useEffect(() => {
-        // Re-fetch when sorting changes
-        setCurrentPage(1)
-        fetchCategoryEvents(1)
-    }, [sortBy])
+    }, [])
     
-    const fetchCategoryEvents = async (page = 1) => {
+    const fetchCategoryEvents = useCallback(async (page = 1) => {
         try {
             setLoading(true)
             setError(null)
@@ -167,66 +169,25 @@ export default function Categories() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [category, sortBy, filters, sortEventsLocally])
 
-    const sortEventsLocally = (events, sortType) => {
-        switch (sortType) {
-            case 'newest':
-                return [...events].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            case 'oldest':
-                return [...events].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-            case 'date-asc':
-                return [...events].sort((a, b) => new Date(a.date) - new Date(b.date))
-            case 'date-desc':
-                return [...events].sort((a, b) => new Date(b.date) - new Date(a.date))
-            case 'price-low':
-                return [...events].sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
-            case 'price-high':
-                return [...events].sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0))
-            case 'alphabetical':
-                return [...events].sort((a, b) => a.title.localeCompare(b.title))
-            case 'popular':
-            default:
-                return [...events].sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0))
+    useEffect(() => {
+        window.scroll(0, 0);
+        setCurrentPage(1) // Reset page when category changes
+        fetchCategoryEvents(1) // Fetch from page 1
+    }, [category, fetchCategoryEvents])
+
+    useEffect(() => {
+        if (currentPage > 1) {
+            fetchCategoryEvents(currentPage)
         }
-    }
+    }, [currentPage, fetchCategoryEvents])
 
-    const handleEventClick = async (eventId) => {
-        try {
-            await addView(eventId)
-            navigate(`/event/${eventId}`)
-        } catch (err) {
-            console.error('Error tracking view:', err)
-            navigate(`/event/${eventId}`)
-        }
-    }
-
-    const handleLikeEvent = async (eventId, e) => {
-        e.stopPropagation()
-        try {
-            await addLike(eventId)
-            // Update the specific event in the list instead of refetching all
-            setCategoryEvents(prev => 
-                prev.map(event => 
-                    event._id === eventId 
-                        ? { ...event, likes: [...(event.likes || []), 'current-user'] }
-                        : event
-                )
-            )
-            toast.success('Event liked!')
-        } catch (err) {
-            console.error('Error liking event:', err)
-            toast.error('Failed to like event')
-        }
-    }
-
-    const handleBookEvent = (eventId, e) => {
-        e.stopPropagation()
-        // Placeholder for future booking functionality
-        toast.info('Booking feature coming soon!')
-        // In the future, this could navigate to a booking page or open a booking modal
-        // navigate(`/book-event/${eventId}`)
-    }
+    useEffect(() => {
+        // Re-fetch when sorting changes
+        setCurrentPage(1)
+        fetchCategoryEvents(1)
+    }, [sortBy, fetchCategoryEvents])
 
     const handleLoadMore = () => {
         if (currentPage < totalPages) {
@@ -243,24 +204,8 @@ export default function Categories() {
         fetchCategoryEvents(1)
     }
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        })
-    }
-
     const formatCategoryName = (cat) => {
         return cat?.toUpperCase().replace(/-/g, ' ') || 'EVENTS'
-    }
-
-    const getEventStats = (event) => {
-        return {
-            likes: event.likes?.length || 0,
-            views: event.views?.length || 0,
-            comments: event.comments?.length || 0
-        }
     }
 
     // Apply client-side filters for additional filtering
@@ -489,163 +434,110 @@ export default function Categories() {
                 </div>
             </section>
 
-            {/* Events Grid */}
-{/* Events Grid - PopularEvents Style */}
-{!loading && !error && filteredEvents.length > 0 && (
-    <section id="categories-events-grid">
-        <div className="container">
-            <div className={`row events-container ${viewMode}-view row-cols-1 row-cols-md-2 row-cols-lg-3 g-4`}>
-                {filteredEvents.map((event) => {
-                    const stats = getEventStats(event)
-                    
-                    return (
-                        <div 
-                            key={event._id} 
-                            className="col d-flex align-items-stretch justify-content-center event-col"
-                        >
-                            <div className="card event-card border-0 shadow rounded-4 w-100 overflow-hidden">
-                                {/* Card Image with Overlays */}
-                                <div className="card-img-container">
-                                    <Link 
-                                        className="card-img text-decoration-none text-body" 
-                                        to={`/event/${event._id}`}
-                                        onClick={() => handleEventClick(event._id)}
+            {/* Events Grid - Simplified PopularEvents Style */}
+            {!loading && !error && filteredEvents.length > 0 && (
+                <section id="categories-events-grid">
+                    <div className="container">
+                        <div className={`row events-container ${viewMode}-view row-cols-1 row-cols-md-2 row-cols-lg-3 g-4`}>
+                            {filteredEvents.map((event) => {
+                                return (
+                                    <div 
+                                        key={event._id} 
+                                        className="col d-flex align-items-stretch justify-content-center"
                                     >
-                                        <img 
-                                            src={event.image || '/default-event-image.jpg'} 
-                                            className="card-img-top" 
-                                            alt={event.title}
-                                            onError={(e) => {
-                                                e.target.src = '/default-event-image.jpg'
-                                            }}
-                                        />
-                                        
-                                        {/* Seats Overlay (similar to PopularEvents) */}
-                                        <div className="seats-overlay d-flex align-items-center">
-                                            <i className="fas fa-users seats-icon"></i>
-                                            <span>
-                                                {event.seats ? 
-                                                    `${event.seats - (event.seatsBooked?.length || 0)} Seats Available` :
-                                                    'Available Seats'
-                                                }
-                                            </span>
-                                        </div>
-                                    </Link>
-                                    
-                                    {/* Price Badge */}
-                                    <div className={`price-badge ${!event.price || event.price === 0 ? 'free' : ''}`}>
-                                        {event.price && event.price > 0 ? `$${event.price}` : 'FREE'}
-                                    </div>
-                                    
-                                    {/* Category Badge */}
-                                    <div className="category-badge">
-                                        {event.category}
-                                    </div>
-                                </div>
-                                
-                                {/* Card Body */}
-                                <div className="card-body d-flex flex-column justify-content-between">
-                                    {/* Date and Location Row */}
-                                    <div className="event-meta-row d-flex justify-content-between mb-3">
-                                        <div className="date-info">
-                                            <i className="bx bx-calendar text-warning me-1"></i>
-                                            <span>{formatDate(event.date)}</span>
-                                        </div>
-                                        <div className="location-info">
-                                            <i className="fas fa-map-marker-alt location-icon me-1"></i>
-                                            <span>{event.location || event.country || 'Location TBD'}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Event Title */}
-                                    <h5 className="card-title">
-                                        <Link 
-                                            to={`/event/${event._id}`}
-                                            onClick={() => handleEventClick(event._id)}
-                                            className="text-decoration-none"
-                                        >
-                                            {event.title}
-                                        </Link>
-                                    </h5>
-                                    
-                                    {/* Event Description */}
-                                    <p className="event-description">
-                                        {event.description?.substring(0, 100)}
-                                        {event.description?.length > 100 && '...'}
-                                    </p>
-                                    
-                                    {/* Footer Actions */}
-                                    <div className="card-footer-actions d-flex justify-content-between align-items-center mt-4 mb-2">
-                                        <span>
+                                        <div className="card border-0 shadow rounded-4 w-100 overflow-hidden">
                                             <Link 
+                                                className="card-img text-decoration-none text-body" 
                                                 to={`/event/${event._id}`}
-                                                className="book-now-link"
-                                                onClick={() => handleEventClick(event._id)}
                                             >
-                                                Book Now
+                                                <img 
+                                                    src={event.image || '/default-event-image.jpg'} 
+                                                    className="card-img-top" 
+                                                    alt={event.title}
+                                                    onError={(e) => {
+                                                        e.target.src = '/default-event-image.jpg'
+                                                    }}
+                                                />
+                                                <div className="seats bg-info py-2 px-4 d-flex align-items-center">
+                                                    <i className="fas fa-users" style={{ width: 30, marginRight: 10 }}></i>
+                                                    <span>
+                                                        {event.seats ? 
+                                                            `${event.seats - (event.seatsBooked?.length || 0)} Seat` :
+                                                            'Available Seats'
+                                                        }
+                                                    </span>
+                                                </div>
                                             </Link>
-                                        </span>
-                                        
-                                        <div className="action-buttons">
-                                            {/* Share Button */}
-                                            <button className="btn share-btn btn-sm">
-                                                <i className="fas fa-share-alt share-icon"></i>
-                                            </button>
                                             
-                                            {/* Like Button */}
-                                            <button 
-                                                className="btn like-btn"
-                                                onClick={(e) => handleLikeEvent(event._id, e)}
-                                                title="Like this event"
-                                            >
-                                                <i className="fas fa-heart"></i>
-                                                <span className="like-count">{stats.likes}</span>
-                                            </button>
-                                            
-                                            {/* View Count */}
-                                            <div className="view-count">
-                                                <i className="fas fa-eye view-icon"></i>
-                                                <span>{stats.views}</span>
+                                            <div className="card-body d-flex flex-column justify-content-between">
+                                                <div className="d-flex justify-content-between mb-3">
+                                                    <div>
+                                                        <i className='bx bx-calendar text-warning me-1'></i>
+                                                        <span>{moment(event.date).format('MMM D, YYYY')}</span>
+                                                    </div>
+                                                    <div>
+                                                        <i className="fas fa-map-marker-alt text-warning me-1"></i>
+                                                        <span>{event.country || event.location || 'Location TBD'}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <h5 className="card-title">
+                                                    <Link to={`/event/${event._id}`} className="text-decoration-none">
+                                                        {event.title}
+                                                    </Link>
+                                                </h5>
+                                                
+                                                <div className="d-flex justify-content-between align-items-center mt-4 mb-2">
+                                                    <span>
+                                                        <Link 
+                                                            to={`/event/${event._id}`} 
+                                                            className='text-warning text-decoration-none'
+                                                        >
+                                                            Book Now
+                                                        </Link>
+                                                    </span>
+                                                    <span>
+                                                        <button className='btn btn-outline-info btn-sm'>
+                                                            <i className="fas fa-share-alt"></i>
+                                                        </button>
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+                                )
+                            })}
+                        </div>
+
+                        {/* Load More Button */}
+                        {currentPage < totalPages && (
+                            <div className="row load-more-section">
+                                <div className="col">
+                                    <div className="load-more-container">
+                                        <button 
+                                            className="btn btn-outline-warning load-more-btn"
+                                            onClick={handleLoadMore}
+                                            disabled={loading}
+                                        >
+                                            {loading ? (
+                                                <>
+                                                    <span className="spinner-border spinner-border-sm" role="status"></span>
+                                                    Loading...
+                                                </>
+                                            ) : (
+                                                'Load More Events'
+                                            )}
+                                        </button>
+                                        <p className="pagination-info">
+                                            Showing {filteredEvents.length} of {totalEvents} events
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )
-                })}
-            </div>
-
-            {/* Load More Button */}
-            {currentPage < totalPages && (
-                <div className="row load-more-section">
-                    <div className="col">
-                        <div className="load-more-container">
-                            <button 
-                                className="btn btn-outline-warning load-more-btn"
-                                onClick={handleLoadMore}
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm" role="status"></span>
-                                        Loading...
-                                    </>
-                                ) : (
-                                    'Load More Events'
-                                )}
-                            </button>
-                            <p className="pagination-info">
-                                Showing {filteredEvents.length} of {totalEvents} events
-                            </p>
-                        </div>
+                        )}
                     </div>
-                </div>
+                </section>
             )}
-        </div>
-    </section>
-)}
-           
 
             <Footer />
         </>
