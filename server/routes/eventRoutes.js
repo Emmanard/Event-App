@@ -26,9 +26,29 @@ const {
     // Add the new functions to imports
     getAllEvents,
     getPopularEventsAll,
-    getPopularEventsSimple
+    getPopularEventsSimple,
+     bookEvent,
+    cancelBooking,
+    getMyBookedEvents,
+    checkBookingStatus,
+    getEventAttendees
 } = require('../controllers/events');
 const { protect } = require("../middlewares/auth");
+
+// Book an event - FIXED: Changed authenticateUser to protect
+router.post('/book/:id', protect("attendee"), bookEvent);
+
+// Cancel booking - FIXED: Changed authenticateUser to protect
+router.delete('/book/:id', protect("attendee"), cancelBooking);
+
+// Get user's booked events - FIXED: Changed authenticateUser to protect
+router.get('/my-bookings', protect("attendee"), getMyBookedEvents);
+
+// Check booking status for an event - FIXED: Changed authenticateUser to protect
+router.get('/booking-status/:id', protect("attendee"), checkBookingStatus);
+
+// Get event attendees (for organizers) - FIXED: Changed authenticateUser to protect
+router.get('/attendees/:id', protect("organizer"), getEventAttendees);
 
 // ================================
 // CORE EVENT MANAGEMENT ROUTES
@@ -100,10 +120,13 @@ router.route("/comment/update")
 router.route("/search")
     .get(searchEvents);
 
-// Advanced search with comprehensive filters
+// Advanced search with comprehensive filters - FIXED: Added missing Event import
 router.route("/advanced-search")
     .get(async (req, res) => {
         try {
+            // Import Event model at the top of the file or here
+            const Event = require('../models/Event');
+            
             const {
                 q,
                 category,
@@ -239,10 +262,12 @@ router.route("/report")
 // EVENT ATTENDANCE MANAGEMENT
 // ================================
 
-// Event attendance
+// Event attendance - FIXED: Added missing Event import
 router.route("/attend/:id")
     .post(protect("attendee"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const event = await Event.findById(req.params.id);
             if (!event) {
                 return res.status(404).json({ success: false, message: 'Event not found' });
@@ -267,6 +292,8 @@ router.route("/attend/:id")
     })
     .delete(protect("attendee"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const event = await Event.findById(req.params.id);
             if (!event) {
                 return res.status(404).json({ success: false, message: 'Event not found' });
@@ -288,6 +315,8 @@ router.route("/attend/:id")
 router.route("/my-attended")
     .get(protect("attendee"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const events = await Event.find({
                 attendees: req.user._id
             }).populate('organizer', 'name');
@@ -310,6 +339,8 @@ router.route("/stats")
 router.route("/analytics/:id")
     .get(protect("organizer"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const event = await Event.findOne({ 
                 _id: req.params.id, 
                 organizer: req.user._id 
@@ -352,6 +383,8 @@ router.route("/analytics/:id")
 router.route("/recommendations")
     .get(protect("organizer", "attendee"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const userId = req.user._id;
             const limit = parseInt(req.query.limit) || 5;
             
@@ -397,6 +430,8 @@ router.route("/recommendations")
 router.route("/bulk")
     .post(protect("organizer"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const { action, eventIds } = req.body;
             
             if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
@@ -452,6 +487,8 @@ router.route("/bulk")
 router.route("/clone/:id")
     .post(protect("organizer"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const originalEvent = await Event.findOne({
                 _id: req.params.id,
                 organizer: req.user._id
@@ -492,6 +529,8 @@ router.route("/clone/:id")
 router.route("/status/:id")
     .put(protect("organizer"), async (req, res) => {
         try {
+            const Event = require('../models/Event');
+            
             const { status } = req.body;
             const validStatuses = ['draft', 'published', 'cancelled', 'completed'];
             

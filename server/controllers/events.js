@@ -899,6 +899,222 @@ const shareEvent = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+// Book an event
+const bookEvent = async (req, res) => {
+    try {
+        const { id } = req.params; // or req.query if you prefer
+        const userId = req.user._id;
+        
+        const event = await Event.findById(id);
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+        
+        // Check if event is published
+        if (event.status !== 'Published') {
+            return res.status(400).json({ success: false, message: 'Event is not available for booking' });
+        }
+        
+        // Check if event date has passed
+        if (new Date(event.date) < new Date()) {
+            return res.status(400).json({ success: false, message: 'Cannot book past events' });
+        }
+        
+        // Check if user already booked this event
+        if (event.seatsBooked.includes(userId)) {
+            return res.status(400).json({ success: false, message: 'You have already booked this event' });
+        }
+        
+        // Check if seats are available
+        if (event.seatsBooked.length >= event.seats) {
+            return res.status(400).json({ success: false, message: 'Event is fully booked' });
+        }
+        
+        // Add user to booked seats
+        event.seatsBooked.push(userId);
+        await event.save();
+        
+        res.json({ 
+            success: true, 
+            message: 'Event booked successfully!',
+            data: {
+                eventId: event._id,
+                eventTitle: event.title,
+                bookedSeats: event.seatsBooked.length,
+                availableSeats: event.seats - event.seatsBooked.length
+            }
+        });
+        
+    } catch (error) {
+        console.error('Book event error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// Cancel event booking
+const cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params; // or req.query
+        const userId = req.user._id;
+        
+        const event = await Event.findById(id);
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+        
+        // Check if user has booked this event
+        if (!event.seatsBooked.includes(userId)) {
+            return res.status(400).json({ success: false, message: 'You have not booked this event' });
+        }
+        
+        // Remove user from booked seats
+        event.seatsBooked = event.seatsBooked.filter(bookedUserId => !bookedUserId.equals(userId));
+        await event.save();
+        
+        res.json({ 
+            success: true, 
+            message: 'Booking cancelled successfully!',
+            data: {
+                eventId: event._id,
+                eventTitle: event.title,
+                bookedSeats: event.seatsBooked.length,
+                availableSeats: event.seats - event.seatsBooked.length
+            }
+        });
+        
+    } catch (error) {
+        console.error('Cancel booking error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// Get user's booked events
+const getMyBookedEvents = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { page = 1, limit = 10, filter = 'all' } = req.query;
+        
+        let dateFilter = {};
+        const now = new Date();
+        
+        // Apply date filter based on request
+        switch (filter) {
+            case 'upcoming':
+                dateFilter = { date: { $gte: now } };
+                break;
+            case 'past':
+                dateFilter = { date: { $lt: now } };
+                break;
+            case 'today':
+                const todayStart = new Date(now.setHours(0, 0, 0, 0));
+                const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+                dateFilter = { date: { $gte: todayStart, $lte: todayEnd } };
+                break;
+            default:
+                // 'all' - no date filter
+                break;
+        }
+        
+        const skip = (page - 1) * limit;
+        
+        const events = await Event.find({
+            seatsBooked: userId,
+            status: 'Published',
+            ...dateFilter
+        })
+        .populate('addedBy', 'name email')
+        .sort({ date: 1 }) // Sort by date ascending (nearest first)
+        .skip(skip)
+        .limit(parseInt(limit));
+        
+        const total = await Event.countDocuments({
+            seatsBooked: userId,
+            status: 'Published',
+            ...dateFilter
+        });
+        
+        res.json({
+            success: true,
+            data: events,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        });
+        
+    } catch (error) {
+        console.error('Get booked events error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// Check if user has booked an event (useful for frontend)
+const checkBookingStatus = async (req, res) => {
+    try {
+        const { id } = req.params; // or req.query
+        const userId = req.user._id;
+        
+        const event = await Event.findById(id).select('seatsBooked seats');
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+        
+        const isBooked = event.seatsBooked.includes(userId);
+        const availableSeats = event.seats - event.seatsBooked.length;
+        
+        res.json({
+            success: true,
+            data: {
+                isBooked,
+                availableSeats,
+                totalSeats: event.seats,
+                bookedSeats: event.seatsBooked.length,
+                canBook: !isBooked && availableSeats > 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('Check booking status error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// Get event attendees (for event organizers)
+const getEventAttendees = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user._id;
+        
+        const event = await Event.findById(id)
+            .populate('seatsBooked', 'name email')
+            .populate('addedBy', '_id');
+        
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+        
+        // Check if user is the event organizer
+        if (!event.addedBy._id.equals(userId)) {
+            return res.status(403).json({ success: false, message: 'Access denied. Only event organizer can view attendees.' });
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                attendees: event.seatsBooked,
+                totalAttendees: event.seatsBooked.length,
+                availableSeats: event.seats - event.seatsBooked.length,
+                totalSeats: event.seats
+            }
+        });
+        
+    } catch (error) {
+        console.error('Get attendees error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
 
 module.exports = {
     addEvent,
@@ -926,5 +1142,10 @@ module.exports = {
     shareEvent,
         getAllEvents,
     getPopularEventsAll,
-    getPopularEventsSimple
+    getPopularEventsSimple,
+      bookEvent,
+    cancelBooking,
+    getMyBookedEvents,
+    checkBookingStatus,
+    getEventAttendees
 };
