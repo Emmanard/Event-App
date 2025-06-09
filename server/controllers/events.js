@@ -670,13 +670,26 @@ const getComments = async (req, res) => {
         const commentsCount = await Comment.find({ eventId: id });
 
         if (comments.length > 0) {
-            return res.status(200).json({ success: true, data: comments, count: commentsCount.length })
+            return res.status(200).json({ 
+                success: true, 
+                data: comments, 
+                count: commentsCount.length 
+            });
         } else {
-            return res.status(404).json({ success: false, message: "No comments found" })
+            console.log("No comments found for event ID:", id);
+            return res.status(200).json({ 
+                success: true, 
+                data: [], 
+                count: 0,
+                message: "No comments found" 
+            });
         }
     } catch (error) {
         console.log(error.message);
-        return res.status(500).json({ success: false, message: "Internal server error. Please try again later." })
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal server error. Please try again later." 
+        });
     }
 }
 
@@ -902,31 +915,45 @@ const shareEvent = async (req, res) => {
 // Book an event
 const bookEvent = async (req, res) => {
     try {
-        const { id } = req.params; // or req.query if you prefer
+      const { id } = req.params; 
         const userId = req.user._id;
+        
+        console.log('Booking event:', { eventId: id, userId }); // <-- ADD DEBUGGING
         
         const event = await Event.findById(id);
         if (!event) {
+            console.log('Event not found:', id); // <-- ADD DEBUGGING
             return res.status(404).json({ success: false, message: 'Event not found' });
         }
         
+        console.log('Event found:', { title: event.title, status: event.status }); // <-- ADD DEBUGGING
+        
         // Check if event is published
         if (event.status !== 'Published') {
+            console.log('Event not published:', event.status); // <-- ADD DEBUGGING
             return res.status(400).json({ success: false, message: 'Event is not available for booking' });
         }
         
         // Check if event date has passed
         if (new Date(event.date) < new Date()) {
+            console.log('Event date has passed:', event.date); // <-- ADD DEBUGGING
             return res.status(400).json({ success: false, message: 'Cannot book past events' });
         }
         
         // Check if user already booked this event
-        if (event.seatsBooked.includes(userId)) {
+        if (event.seatsBooked && event.seatsBooked.includes(userId)) {
+            console.log('User already booked:', userId); // <-- ADD DEBUGGING
             return res.status(400).json({ success: false, message: 'You have already booked this event' });
+        }
+        
+        // Initialize seatsBooked if it doesn't exist
+        if (!event.seatsBooked) {
+            event.seatsBooked = [];
         }
         
         // Check if seats are available
         if (event.seatsBooked.length >= event.seats) {
+            console.log('Event fully booked:', { booked: event.seatsBooked.length, total: event.seats }); // <-- ADD DEBUGGING
             return res.status(400).json({ success: false, message: 'Event is fully booked' });
         }
         
@@ -934,9 +961,11 @@ const bookEvent = async (req, res) => {
         event.seatsBooked.push(userId);
         await event.save();
         
+        console.log('Booking successful:', { eventId: id, userId, newBookedCount: event.seatsBooked.length }); // <-- ADD DEBUGGING
+        
         res.json({ 
             success: true, 
-            message: 'Event booked successfully!',
+            msg: 'Event booked successfully!', // <-- CHANGED 'message' to 'msg' to match frontend expectation
             data: {
                 eventId: event._id,
                 eventTitle: event.title,
@@ -946,7 +975,7 @@ const bookEvent = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Book event error:', error);
+        console.error('Book event error:', error); // <-- ADD DEBUGGING
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
@@ -954,7 +983,7 @@ const bookEvent = async (req, res) => {
 // Cancel event booking
 const cancelBooking = async (req, res) => {
     try {
-        const { id } = req.params; // or req.query
+        const { id } = req.params; 
         const userId = req.user._id;
         
         const event = await Event.findById(id);
@@ -1053,7 +1082,7 @@ const getMyBookedEvents = async (req, res) => {
 // Check if user has booked an event (useful for frontend)
 const checkBookingStatus = async (req, res) => {
     try {
-        const { id } = req.params; // or req.query
+      const { id } = req.params; 
         const userId = req.user._id;
         
         const event = await Event.findById(id).select('seatsBooked seats');
@@ -1084,7 +1113,7 @@ const checkBookingStatus = async (req, res) => {
 // Get event attendees (for event organizers)
 const getEventAttendees = async (req, res) => {
     try {
-        const { id } = req.params;
+      const { id } = req.params; 
         const userId = req.user._id;
         
         const event = await Event.findById(id)

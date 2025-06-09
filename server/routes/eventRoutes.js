@@ -35,7 +35,7 @@ const {
 } = require('../controllers/events');
 const { protect } = require("../middlewares/auth");
 
-// Book an event - FIXED: Changed authenticateUser to protect
+// Book an event - FIXED: Added /:id path parameter
 router.post('/book/:id', protect("attendee"), bookEvent);
 
 // Cancel booking - FIXED: Changed authenticateUser to protect
@@ -49,7 +49,6 @@ router.get('/booking-status/:id', protect("attendee"), checkBookingStatus);
 
 // Get event attendees (for organizers) - FIXED: Changed authenticateUser to protect
 router.get('/attendees/:id', protect("organizer"), getEventAttendees);
-
 // ================================
 // CORE EVENT MANAGEMENT ROUTES
 // ================================

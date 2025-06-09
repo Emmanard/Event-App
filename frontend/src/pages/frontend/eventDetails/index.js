@@ -134,56 +134,76 @@ export default function Index() {
             setLoading(false)
         }
     }
-
-    const handleBookEvent = async () => {
-        if (!user?._id) {
-            if (window.toastify) {
-                window.toastify("Please login to book this event", "warning");
-            }
-            return;
+const handleBookEvent = async () => {
+    // DEBUG: Check auth context
+    console.log('🔍 BOOKING DEBUG:');
+    console.log('User from context:', user);
+    console.log('User ID:', user?._id);
+    console.log('Token in localStorage:', localStorage.getItem("jwtoken"));
+    console.log('Booking status:', bookingStatus);
+    console.log('Event ID:', id);
+    
+    if (!user?._id) {
+        console.log('❌ No user ID found');
+        if (window.toastify) {
+            window.toastify("Please login to book this event", "warning");
         }
-
-        const bookingInfo = getBookingInfo(event, bookingStatus?.isBooked);
-        
-        if (!bookingInfo.canBook && !bookingInfo.isBooked) {
-            if (window.toastify) {
-                window.toastify("This event cannot be booked", "error");
-            }
-            return;
-        }
-
-        setBookingLoading(true);
-        try {
-            if (bookingInfo.isBooked) {
-                // Cancel booking
-                const { data } = await cancelBooking(id);
-                if (window.toastify) {
-                    window.toastify(data?.msg || "Booking cancelled successfully", "success");
-                }
-                setBookingStatus({ isBooked: false });
-            } else {
-                // Book event
-                const { data } = await bookEvent(id);
-                if (window.toastify) {
-                    window.toastify(data?.msg || "Event booked successfully", "success");
-                }
-                setBookingStatus({ isBooked: true });
-            }
-            getEventData(); // Refresh event data to get updated seat count
-        } catch (error) {
-            console.log(error);
-            let msg = "Some error occurred";
-            let { status, data } = error?.response;
-            if (status == 400 || status == 401 || status == 500 || status == 413 || status == 404) {
-                msg = data.message || data.msg;
-            }
-            if (window.toastify) {
-                window.toastify(msg, "error");
-            }
-        } finally {
-            setBookingLoading(false);
-        }
+        return;
     }
+
+    const bookingInfo = getBookingInfo(event, bookingStatus?.isBooked);
+    
+    
+    if (!bookingInfo.canBook && !bookingInfo.isBooked) {
+        console.log('❌ Cannot book event');
+        if (window.toastify) {
+            window.toastify("This event cannot be booked", "error");
+        }
+        return;
+    }
+    setBookingLoading(true);
+    
+    try {
+        if (bookingInfo.isBooked) {
+            console.log('📤 Cancelling booking...');
+            // Cancel booking
+            const { data } = await cancelBooking(id);
+           
+            if (window.toastify) {
+                window.toastify(data?.msg || "Booking cancelled successfully", "success");
+            }
+            setBookingStatus({ isBooked: false });
+        } else {
+            console.log('📤 Making booking...');
+            // Book event
+            const { data } = await bookEvent(id);
+            console.log('✅ Book response:', data);
+            if (window.toastify) {
+                window.toastify(data?.msg || "Event booked successfully", "success");
+            }
+            setBookingStatus({ isBooked: true });
+        }
+        
+        console.log('🔄 Refreshing event data...');
+        getEventData(); // Refresh event data to get updated seat count
+    } catch (error) {
+        console.log('❌ Booking error:', error);
+        console.log('Error response:', error?.response);
+        console.log('Error status:', error?.response?.status);
+        console.log('Error data:', error?.response?.data);
+        
+        let msg = "Some error occurred";
+        let { status, data } = error?.response || {};
+        if (status == 400 || status == 401 || status == 500 || status == 413 || status == 404) {
+            msg = data?.message || data?.msg || msg;
+        }
+        if (window.toastify) {
+            window.toastify(msg, "error");
+        }
+    } finally {
+        setBookingLoading(false);
+    }
+}
 
     const handleBookingClick = () => {
         if (!user?._id) {

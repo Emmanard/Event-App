@@ -443,28 +443,27 @@ export const clearCache = () => {
 // ================================
 
 export const bookEvent = (id) => {
-  return post(`${root}/api/v1/event/book/${id}`);
+  return post(`${root}/api/v1/event/book/${id}`); // ✅ Changed to path parameter
 };
 
 export const cancelBooking = (id) => {
-  return del(`${root}/api/v1/event/book/${id}`);
+  return del(`${root}/api/v1/event/book/${id}`); // ✅ Already correct - path parameter
 };
 
 export const getMyBookedEvents = (params = {}) => {
   const queryString = new URLSearchParams(params).toString();
   return get(
     `${root}/api/v1/event/my-bookings${queryString ? `?${queryString}` : ""}`
-  );
+  ); // ✅ Already correct - query parameters for filtering
 };
 
 export const checkBookingStatus = (id) => {
-  return get(`${root}/api/v1/event/booking-status/${id}`);
+  return get(`${root}/api/v1/event/booking-status/${id}`); // ✅ Already correct - path parameter
 };
 
 export const getEventAttendees = (id) => {
-  return get(`${root}/api/v1/event/attendees/${id}`);
+  return get(`${root}/api/v1/event/attendees/${id}`); // ✅ Already correct - path parameter
 };
-
 // ================================
 // UTILITY FUNCTIONS FOR BOOKING
 // ================================
