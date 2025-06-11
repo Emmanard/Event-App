@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
-
-const userSchema = new mongoose.Schema({
+const eventSchema = new mongoose.Schema({
     title: {
         type: String,
         trim: true,
@@ -64,11 +63,9 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "/events/no-image.jpg",
     },
+    // Use Mixed type to support both legacy ObjectIds and new booking objects
     seatsBooked: {
-        type: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        }],
+        type: [mongoose.Schema.Types.Mixed],
         default: []
     },
     views: {
@@ -95,13 +92,7 @@ const userSchema = new mongoose.Schema({
     addedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
-
     }
+}, { timestamps: true });
 
-
-},
-    { timestamps: true }
-);
-
-
-module.exports = mongoose.model("Event", userSchema);
+module.exports = mongoose.model("Event", eventSchema);

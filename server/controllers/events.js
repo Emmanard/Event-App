@@ -912,38 +912,104 @@ const shareEvent = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-// Book an event
 const bookEvent = async (req, res) => {
     try {
-      const { id } = req.params; 
-        const userId = req.user._id;
+        const { id } = req.params; 
+        const userId = req.user?._id;
         
-        console.log('Booking event:', { eventId: id, userId }); // <-- ADD DEBUGGING
-        
-        const event = await Event.findById(id);
-        if (!event) {
-            console.log('Event not found:', id); // <-- ADD DEBUGGING
-            return res.status(404).json({ success: false, message: 'Event not found' });
+        // Validate user authentication
+        if (!userId) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'User not authenticated' 
+            });
         }
         
-        console.log('Event found:', { title: event.title, status: event.status }); // <-- ADD DEBUGGING
+        // Validate ObjectId format
+        if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid event ID format' 
+            });
+        }
+        
+        // Extract booking data from request body
+        const { 
+            fullName, 
+            email, 
+            phone, 
+            quantity = 1 // Default to 1 if not provided
+        } = req.body;
+        
+        console.log('Booking event:', { 
+            eventId: id, 
+            userId, 
+            quantity, 
+            fullName, 
+            email, 
+            phone 
+        });
+        
+        // Validate quantity
+        const bookingQuantity = parseInt(quantity);
+        if (isNaN(bookingQuantity) || bookingQuantity < 1 || bookingQuantity > 10) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Quantity must be a valid number between 1 and 10' 
+            });
+        }
+        
+        // Find event with error handling
+        let event;
+        try {
+            event = await Event.findById(id);
+        } catch (dbError) {
+            console.error('Database error finding event:', dbError);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Database error occurred' 
+            });
+        }
+        
+        if (!event) {
+            console.log('Event not found:', id);
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Event not found' 
+            });
+        }
+        
+        console.log('Event found:', { 
+            title: event.title, 
+            status: event.status,
+            seats: event.seats,
+            currentBookings: event.seatsBooked?.length || 0
+        });
         
         // Check if event is published
         if (event.status !== 'Published') {
-            console.log('Event not published:', event.status); // <-- ADD DEBUGGING
-            return res.status(400).json({ success: false, message: 'Event is not available for booking' });
+            console.log('Event not published:', event.status);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Event is not available for booking' 
+            });
         }
         
         // Check if event date has passed
-        if (new Date(event.date) < new Date()) {
-            console.log('Event date has passed:', event.date); // <-- ADD DEBUGGING
-            return res.status(400).json({ success: false, message: 'Cannot book past events' });
+        if (event.date && new Date(event.date) < new Date()) {
+            console.log('Event date has passed:', event.date);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot book past events' 
+            });
         }
         
-        // Check if user already booked this event
-        if (event.seatsBooked && event.seatsBooked.includes(userId)) {
-            console.log('User already booked:', userId); // <-- ADD DEBUGGING
-            return res.status(400).json({ success: false, message: 'You have already booked this event' });
+        // Validate event has seats property
+        if (!event.seats || event.seats <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Event has no available seats' 
+            });
         }
         
         // Initialize seatsBooked if it doesn't exist
@@ -951,21 +1017,207 @@ const bookEvent = async (req, res) => {
             event.seatsBooked = [];
         }
         
-        // Check if seats are available
-        if (event.seatsBooked.length >= event.seats) {
-            console.log('Event fully booked:', { booked: event.seatsBooked.length, total: event.seats }); // <-- ADD DEBUGGING
-            return res.status(400).json({ success: false, message: 'Event is fully booked' });
+        // Check if user already booked this event (handle both legacy and new format)
+        const userBookingCount = event.seatsBooked.filter(booking => {
+            // Handle legacy format (just ObjectId)
+            if (mongoose.Types.ObjectId.isValid(booking) && !booking.userId) {
+                return booking.toString() === userId.toString();
+            }
+            // Handle new format (object with userId)
+            return booking.userId && booking.userId.toString() === userId.toString();
+        }).length;
+        
+        if (userBookingCount > 0) {
+            console.log('User already booked:', userId);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'You have already booked this event' 
+            });
         }
         
-        // Add user to booked seats
-        event.seatsBooked.push(userId);
-        await event.save();
+        // Check if enough seats are available
+        const availableSeats = event.seats - event.seatsBooked.length;
+        if (availableSeats < bookingQuantity) {
+            console.log('Not enough seats available:', { 
+                requested: bookingQuantity, 
+                available: availableSeats 
+            });
+            return res.status(400).json({ 
+                success: false, 
+                message: `Only ${availableSeats} seats available, but you requested ${bookingQuantity}` 
+            });
+        }
         
-        console.log('Booking successful:', { eventId: id, userId, newBookedCount: event.seatsBooked.length }); // <-- ADD DEBUGGING
+        // Create booking entries with validation
+        const bookingEntries = [];
+        for (let i = 0; i < bookingQuantity; i++) {
+            const bookingEntry = {
+                userId: userId,
+                fullName: fullName || req.user?.fullName || req.user?.name || 'Unknown',
+                email: email || req.user?.email || '',
+                phone: phone || req.user?.phone || '',
+                bookingDate: new Date(),
+                seatNumber: event.seatsBooked.length + i + 1 // Sequential seat numbering
+            };
+            
+            // Validate required fields
+            if (!bookingEntry.email) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Email is required for booking' 
+                });
+            }
+            
+            bookingEntries.push(bookingEntry);
+        }
+        
+        // Add bookings to event and save with error handling
+        event.seatsBooked.push(...bookingEntries);
+        
+        try {
+            await event.save();
+        } catch (saveError) {
+            console.error('Error saving event booking:', saveError);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Failed to save booking. Please try again.' 
+            });
+        }
+        
+        console.log('Booking successful:', { 
+            eventId: id, 
+            userId, 
+            quantity: bookingQuantity,
+            newBookedCount: event.seatsBooked.length 
+        });
         
         res.json({ 
             success: true, 
-            msg: 'Event booked successfully!', // <-- CHANGED 'message' to 'msg' to match frontend expectation
+            msg: `Successfully booked ${bookingQuantity} seat(s)!`,
+            data: {
+                eventId: event._id,
+                eventTitle: event.title,
+                bookingQuantity: bookingQuantity,
+                seatNumbers: bookingEntries.map(entry => entry.seatNumber),
+                bookedSeats: event.seatsBooked.length,
+                availableSeats: event.seats - event.seatsBooked.length,
+                bookingDetails: bookingEntries
+            }
+        });
+        
+    } catch (error) {
+        console.error('Book event error:', error);
+        
+        // More specific error handling
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Validation error: ' + error.message 
+            });
+        }
+        
+        if (error.name === 'CastError') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid data format provided' 
+            });
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
+    }
+};
+
+// Legacy single booking API (for backward compatibility)
+const bookEventSingle = async (req, res) => {
+    try {
+        const { id } = req.params; 
+        const userId = req.user._id;
+        
+        console.log('Single booking event:', { eventId: id, userId });
+        
+        const event = await Event.findById(id);
+        if (!event) {
+            console.log('Event not found:', id);
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Event not found' 
+            });
+        }
+        
+        console.log('Event found:', { 
+            title: event.title, 
+            status: event.status 
+        });
+        
+        // Check if event is published
+        if (event.status !== 'Published') {
+            console.log('Event not published:', event.status);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Event is not available for booking' 
+            });
+        }
+        
+        // Check if event date has passed
+        if (new Date(event.date) < new Date()) {
+            console.log('Event date has passed:', event.date);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot book past events' 
+            });
+        }
+        
+        // Initialize seatsBooked if it doesn't exist
+        if (!event.seatsBooked) {
+            event.seatsBooked = [];
+        }
+        
+        // For legacy compatibility, check if user ID exists directly in array
+        const hasLegacyBooking = event.seatsBooked.some(booking => 
+            typeof booking === 'string' && booking === userId.toString()
+        );
+        
+        // Check for new format bookings
+        const hasNewBooking = event.seatsBooked.some(booking => 
+            booking.userId && booking.userId.toString() === userId.toString()
+        );
+        
+        if (hasLegacyBooking || hasNewBooking) {
+            console.log('User already booked:', userId);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'You have already booked this event' 
+            });
+        }
+        
+        // Check if seats are available
+        if (event.seatsBooked.length >= event.seats) {
+            console.log('Event fully booked:', { 
+                booked: event.seatsBooked.length, 
+                total: event.seats 
+            });
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Event is fully booked' 
+            });
+        }
+        
+        // Add user to booked seats (legacy format for backward compatibility)
+        event.seatsBooked.push(userId);
+        await event.save();
+        
+        console.log('Single booking successful:', { 
+            eventId: id, 
+            userId, 
+            newBookedCount: event.seatsBooked.length 
+        });
+        
+        res.json({ 
+            success: true, 
+            msg: 'Event booked successfully!',
             data: {
                 eventId: event._id,
                 eventTitle: event.title,
@@ -975,37 +1227,101 @@ const bookEvent = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Book event error:', error); // <-- ADD DEBUGGING
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        console.error('Single book event error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
     }
 };
 
-// Cancel event booking
+// Cancel event booking (enhanced to handle both formats)
 const cancelBooking = async (req, res) => {
     try {
         const { id } = req.params; 
         const userId = req.user._id;
         
+        console.log('Cancel booking request:', { eventId: id, userId: userId.toString() });
+        
         const event = await Event.findById(id);
         if (!event) {
-            return res.status(404).json({ success: false, message: 'Event not found' });
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Event not found' 
+            });
         }
         
-        // Check if user has booked this event
-        if (!event.seatsBooked.includes(userId)) {
-            return res.status(400).json({ success: false, message: 'You have not booked this event' });
+        console.log('Event found, current seatsBooked:', event.seatsBooked);
+        
+        // Initialize seatsBooked if it doesn't exist
+        if (!event.seatsBooked) {
+            event.seatsBooked = [];
         }
         
-        // Remove user from booked seats
-        event.seatsBooked = event.seatsBooked.filter(bookedUserId => !bookedUserId.equals(userId));
-        await event.save();
+        // Find all bookings for this user (both formats)
+        const bookingsToRemove = [];
+        
+        event.seatsBooked.forEach((booking, index) => {
+            let isUserBooking = false;
+            
+            // Check if it's a legacy booking (string format)
+            if (typeof booking === 'string' || booking instanceof mongoose.Types.ObjectId) {
+                if (booking.toString() === userId.toString()) {
+                    isUserBooking = true;
+                    console.log('Found legacy booking at index:', index);
+                }
+            }
+            // Check if it's a new format booking (object with userId)
+            else if (booking && booking.userId) {
+                if (booking.userId.toString() === userId.toString()) {
+                    isUserBooking = true;
+                    console.log('Found new format booking at index:', index);
+                }
+            }
+            
+            if (isUserBooking) {
+                bookingsToRemove.push(index);
+            }
+        });
+        
+        console.log('Bookings to remove at indices:', bookingsToRemove);
+        
+        if (bookingsToRemove.length === 0) {
+            console.log('No bookings found for user');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'You have not booked this event' 
+            });
+        }
+        
+        // Remove bookings in reverse order to maintain correct indices
+        bookingsToRemove.reverse().forEach(index => {
+            console.log('Removing booking at index:', index);
+            event.seatsBooked.splice(index, 1);
+        });
+        
+        console.log('Bookings after removal:', event.seatsBooked);
+        
+        try {
+            await event.save();
+            console.log('Event saved successfully');
+        } catch (saveError) {
+            console.error('Error saving event after cancellation:', saveError);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Failed to cancel booking. Please try again.' 
+            });
+        }
+        
+        const cancelledCount = bookingsToRemove.length;
         
         res.json({ 
             success: true, 
-            message: 'Booking cancelled successfully!',
+            message: `Successfully cancelled ${cancelledCount} booking(s)!`,
             data: {
                 eventId: event._id,
                 eventTitle: event.title,
+                cancelledBookings: cancelledCount,
                 bookedSeats: event.seatsBooked.length,
                 availableSeats: event.seats - event.seatsBooked.length
             }
@@ -1013,11 +1329,14 @@ const cancelBooking = async (req, res) => {
         
     } catch (error) {
         console.error('Cancel booking error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
     }
 };
 
-// Get user's booked events
+// Get user's booked events (enhanced to handle both formats)
 const getMyBookedEvents = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -1046,25 +1365,50 @@ const getMyBookedEvents = async (req, res) => {
         
         const skip = (page - 1) * limit;
         
+        // Find events where user has booked (both legacy and new format)
         const events = await Event.find({
-            seatsBooked: userId,
+            $or: [
+                { seatsBooked: userId }, // Legacy format
+                { 'seatsBooked.userId': userId } // New format
+            ],
             status: 'Published',
             ...dateFilter
         })
-        .populate('addedBy', 'name email')
+        .populate('addedBy', 'name email fullName')
         .sort({ date: 1 }) // Sort by date ascending (nearest first)
         .skip(skip)
         .limit(parseInt(limit));
         
+        // Add booking details for each event
+        const eventsWithBookingDetails = events.map(event => {
+            const eventObj = event.toObject();
+            
+            // Find user's bookings in this event
+            const userBookings = event.seatsBooked.filter(booking => {
+                if (typeof booking === 'string') {
+                    return booking === userId.toString();
+                }
+                return booking.userId && booking.userId.toString() === userId.toString();
+            });
+            
+            eventObj.userBookingDetails = userBookings;
+            eventObj.userBookingCount = userBookings.length;
+            
+            return eventObj;
+        });
+        
         const total = await Event.countDocuments({
-            seatsBooked: userId,
+            $or: [
+                { seatsBooked: userId },
+                { 'seatsBooked.userId': userId }
+            ],
             status: 'Published',
             ...dateFilter
         });
         
         res.json({
             success: true,
-            data: events,
+            data: eventsWithBookingDetails,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -1075,65 +1419,160 @@ const getMyBookedEvents = async (req, res) => {
         
     } catch (error) {
         console.error('Get booked events error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
     }
 };
 
-// Check if user has booked an event (useful for frontend)
+// Check if user has booked an event (enhanced to handle both formats)
 const checkBookingStatus = async (req, res) => {
     try {
-      const { id } = req.params; 
+        const { id } = req.params; 
         const userId = req.user._id;
+        
+        console.log('Check booking status:', { eventId: id, userId: userId.toString() });
         
         const event = await Event.findById(id).select('seatsBooked seats');
         if (!event) {
-            return res.status(404).json({ success: false, message: 'Event not found' });
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Event not found' 
+            });
         }
         
-        const isBooked = event.seatsBooked.includes(userId);
+        // Initialize seatsBooked if it doesn't exist
+        if (!event.seatsBooked) {
+            event.seatsBooked = [];
+        }
+        
+        console.log('Event seatsBooked:', event.seatsBooked);
+        
+        // Count user bookings in both formats
+        let userBookingCount = 0;
+        const userBookingDetails = [];
+        
+        event.seatsBooked.forEach((booking, index) => {
+            // Check legacy format (string/ObjectId)
+            if (typeof booking === 'string' || booking instanceof mongoose.Types.ObjectId) {
+                if (booking.toString() === userId.toString()) {
+                    userBookingCount++;
+                    userBookingDetails.push({
+                        type: 'legacy',
+                        index: index,
+                        userId: booking
+                    });
+                }
+            }
+            // Check new format (object with userId)
+            else if (booking && booking.userId) {
+                if (booking.userId.toString() === userId.toString()) {
+                    userBookingCount++;
+                    userBookingDetails.push({
+                        type: 'detailed',
+                        index: index,
+                        ...booking
+                    });
+                }
+            }
+        });
+        
+        const isBooked = userBookingCount > 0;
         const availableSeats = event.seats - event.seatsBooked.length;
+        
+        console.log('Booking status result:', {
+            isBooked,
+            userBookingCount,
+            availableSeats,
+            userBookingDetails
+        });
         
         res.json({
             success: true,
             data: {
                 isBooked,
+                userBookingCount,
                 availableSeats,
                 totalSeats: event.seats,
                 bookedSeats: event.seatsBooked.length,
-                canBook: !isBooked && availableSeats > 0
+                canBook: !isBooked && availableSeats > 0,
+                bookingDetails: userBookingDetails
             }
         });
         
     } catch (error) {
         console.error('Check booking status error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
     }
 };
 
-// Get event attendees (for event organizers)
+// Get event attendees (enhanced to handle both formats)
 const getEventAttendees = async (req, res) => {
     try {
-      const { id } = req.params; 
+        const { id } = req.params; 
         const userId = req.user._id;
         
         const event = await Event.findById(id)
-            .populate('seatsBooked', 'name email')
             .populate('addedBy', '_id');
         
         if (!event) {
-            return res.status(404).json({ success: false, message: 'Event not found' });
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Event not found' 
+            });
         }
         
         // Check if user is the event organizer
         if (!event.addedBy._id.equals(userId)) {
-            return res.status(403).json({ success: false, message: 'Access denied. Only event organizer can view attendees.' });
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Access denied. Only event organizer can view attendees.' 
+            });
         }
+        
+        // Separate legacy and new format bookings
+        const legacyBookings = [];
+        const detailedBookings = [];
+        
+        for (const booking of event.seatsBooked) {
+            if (typeof booking === 'string') {
+                // Legacy booking - fetch user details
+                try {
+                    const user = await User.findById(booking).select('name email fullName phone');
+                    if (user) {
+                        legacyBookings.push({
+                            userId: booking,
+                            fullName: user.fullName || user.name,
+                            email: user.email,
+                            phone: user.phone,
+                            bookingType: 'legacy'
+                        });
+                    }
+                } catch (err) {
+                    console.log('Could not fetch user details for legacy booking:', booking);
+                }
+            } else if (booking.userId) {
+                // New format booking
+                detailedBookings.push({
+                    ...booking,
+                    bookingType: 'detailed'
+                });
+            }
+        }
+        
+        const allAttendees = [...legacyBookings, ...detailedBookings];
         
         res.json({
             success: true,
             data: {
-                attendees: event.seatsBooked,
+                attendees: allAttendees,
                 totalAttendees: event.seatsBooked.length,
+                legacyBookings: legacyBookings.length,
+                detailedBookings: detailedBookings.length,
                 availableSeats: event.seats - event.seatsBooked.length,
                 totalSeats: event.seats
             }
@@ -1141,9 +1580,13 @@ const getEventAttendees = async (req, res) => {
         
     } catch (error) {
         console.error('Get attendees error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error' 
+        });
     }
 };
+
 
 module.exports = {
     addEvent,
@@ -1172,9 +1615,10 @@ module.exports = {
         getAllEvents,
     getPopularEventsAll,
     getPopularEventsSimple,
-      bookEvent,
-    cancelBooking,
-    getMyBookedEvents,
-    checkBookingStatus,
-    getEventAttendees
+     bookEvent,           // Enhanced booking with form data and quantity support
+    bookEventSingle,     // Legacy single booking for backward compatibility
+    cancelBooking,       // Enhanced cancellation
+    getMyBookedEvents,   // Enhanced to show booking details
+    checkBookingStatus,  // Enhanced status check
+    getEventAttendees 
 };

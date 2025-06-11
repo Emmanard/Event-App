@@ -7,7 +7,7 @@ import {
     addLike, 
     addView, 
     getEvent,
-    bookEvent,
+     bookEventSingle,
     cancelBooking,
     checkBookingStatus,
     getBookingInfo,
@@ -176,7 +176,7 @@ const handleBookEvent = async () => {
         } else {
             console.log('📤 Making booking...');
             // Book event
-            const { data } = await bookEvent(id);
+            const { data } = await bookEventSingle(id);
             console.log('✅ Book response:', data);
             if (window.toastify) {
                 window.toastify(data?.msg || "Event booked successfully", "success");
@@ -400,7 +400,7 @@ const handleBookEvent = async () => {
                         )}
                     </div>
                     <div className="col-12 col-md-4 mt-4 mt-md-0">
-                        <RightCol event={event} bookingInfo={bookingInfo} />
+                       <RightCol event={event} user={user} />
                     </div>
                 </div>
                 {event?.status === "Published" &&

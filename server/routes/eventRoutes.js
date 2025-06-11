@@ -27,7 +27,8 @@ const {
     getAllEvents,
     getPopularEventsAll,
     getPopularEventsSimple,
-     bookEvent,
+      bookEvent,
+    bookEventSingle,
     cancelBooking,
     getMyBookedEvents,
     checkBookingStatus,
@@ -35,20 +36,27 @@ const {
 } = require('../controllers/events');
 const { protect } = require("../middlewares/auth");
 
-// Book an event - FIXED: Added /:id path parameter
+ // ================================
+// CORE BOOKING  ROUTES
+// ================================
+// Enhanced booking route (supports both single and bulk booking with form data)
 router.post('/book/:id', protect("attendee"), bookEvent);
 
-// Cancel booking - FIXED: Changed authenticateUser to protect
+// Legacy single booking route (for backward compatibility)
+router.post('/book-single/:id', protect("attendee"), bookEventSingle);
+
+// Cancel booking - FIXED: Updated route path and middleware
 router.delete('/book/:id', protect("attendee"), cancelBooking);
 
-// Get user's booked events - FIXED: Changed authenticateUser to protect
+// Get user's booked events
 router.get('/my-bookings', protect("attendee"), getMyBookedEvents);
 
-// Check booking status for an event - FIXED: Changed authenticateUser to protect
+// Check booking status for an event - FIXED: Updated route path
 router.get('/booking-status/:id', protect("attendee"), checkBookingStatus);
 
-// Get event attendees (for organizers) - FIXED: Changed authenticateUser to protect
+// Get event attendees (for organizers only)
 router.get('/attendees/:id', protect("organizer"), getEventAttendees);
+
 // ================================
 // CORE EVENT MANAGEMENT ROUTES
 // ================================

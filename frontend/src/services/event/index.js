@@ -442,28 +442,35 @@ export const clearCache = () => {
 // EVENT BOOKING MANAGEMENT
 // ================================
 
-export const bookEvent = (id) => {
-  return post(`${root}/api/v1/event/book/${id}`); // ✅ Changed to path parameter
+export const bookEvent = (id, formData = {}) => {
+  // Enhanced booking route that supports both single and bulk booking with form data
+  return post(`${root}/api/v1/event/book/${id}`, formData);
+};
+
+export const bookEventSingle = (id) => {
+  // Legacy single booking route for backward compatibility
+  return post(`${root}/api/v1/event/book-single/${id}`);
 };
 
 export const cancelBooking = (id) => {
-  return del(`${root}/api/v1/event/book/${id}`); // ✅ Already correct - path parameter
+  return del(`${root}/api/v1/event/book/${id}`);
 };
 
 export const getMyBookedEvents = (params = {}) => {
   const queryString = new URLSearchParams(params).toString();
   return get(
     `${root}/api/v1/event/my-bookings${queryString ? `?${queryString}` : ""}`
-  ); // ✅ Already correct - query parameters for filtering
+  );
 };
 
 export const checkBookingStatus = (id) => {
-  return get(`${root}/api/v1/event/booking-status/${id}`); // ✅ Already correct - path parameter
+  return get(`${root}/api/v1/event/booking-status/${id}`);
 };
 
 export const getEventAttendees = (id) => {
-  return get(`${root}/api/v1/event/attendees/${id}`); // ✅ Already correct - path parameter
+  return get(`${root}/api/v1/event/attendees/${id}`);
 };
+
 // ================================
 // UTILITY FUNCTIONS FOR BOOKING
 // ================================
@@ -515,4 +522,50 @@ export const getBookingButtonClass = (bookingInfo) => {
   if (bookingInfo.isBooked) return "btn-danger"; // Red for cancel
   if (bookingInfo.isFullyBooked) return "btn-secondary"; // Gray for disabled
   return "btn-primary"; // Blue for book now
+};
+
+// ================================
+// BOOKING HELPER FUNCTIONS
+// ================================
+
+/**
+ * Handles booking with automatic fallback
+ * @param {string} id - Event ID
+ * @param {Object} formData - Optional form data for enhanced booking
+ * @param {boolean} useLegacy - Force use of legacy single booking
+ */
+export const handleBooking = async (id, formData = {}, useLegacy = false) => {
+  try {
+    if (useLegacy || Object.keys(formData).length === 0) {
+      return await bookEventSingle(id);
+    }
+    return await bookEvent(id, formData);
+  } catch (error) {
+    // Fallback to single booking if enhanced booking fails
+    if (!useLegacy) {
+      console.warn('Enhanced booking failed, falling back to single booking:', error);
+      return await bookEventSingle(id);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Batch check booking status for multiple events
+ * @param {Array} eventIds - Array of event IDs
+ */
+export const checkMultipleBookingStatus = async (eventIds) => {
+  try {
+    const promises = eventIds.map(id => checkBookingStatus(id));
+    const results = await Promise.allSettled(promises);
+    
+    return eventIds.reduce((acc, id, index) => {
+      const result = results[index];
+      acc[id] = result.status === 'fulfilled' ? result.value : null;
+      return acc;
+    }, {});
+  } catch (error) {
+    console.error('Error checking multiple booking statuses:', error);
+    return {};
+  }
 };
