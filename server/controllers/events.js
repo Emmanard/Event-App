@@ -1017,14 +1017,17 @@ const bookEvent = async (req, res) => {
             event.seatsBooked = [];
         }
         
-        // Check if user already booked this event (handle both legacy and new format)
+        // FIXED: Check if user already booked this event (handle both legacy and new format)
         const userBookingCount = event.seatsBooked.filter(booking => {
-            // Handle legacy format (just ObjectId)
-            if (mongoose.Types.ObjectId.isValid(booking) && !booking.userId) {
+            // Handle legacy format (just ObjectId/string)
+            if (typeof booking === 'string' || (mongoose.Types.ObjectId.isValid(booking) && !booking.userId)) {
                 return booking.toString() === userId.toString();
             }
             // Handle new format (object with userId)
-            return booking.userId && booking.userId.toString() === userId.toString();
+            if (booking && typeof booking === 'object' && booking.userId) {
+                return booking.userId.toString() === userId.toString();
+            }
+            return false;
         }).length;
         
         if (userBookingCount > 0) {
@@ -1130,7 +1133,7 @@ const bookEvent = async (req, res) => {
     }
 };
 
-// Legacy single booking API (for backward compatibility)
+// FIXED: Legacy single booking API (for backward compatibility)
 const bookEventSingle = async (req, res) => {
     try {
         const { id } = req.params; 
@@ -1175,17 +1178,20 @@ const bookEventSingle = async (req, res) => {
             event.seatsBooked = [];
         }
         
-        // For legacy compatibility, check if user ID exists directly in array
-        const hasLegacyBooking = event.seatsBooked.some(booking => 
-            typeof booking === 'string' && booking === userId.toString()
-        );
+        // FIXED: Check for both legacy and new format bookings
+        const hasExistingBooking = event.seatsBooked.some(booking => {
+            // Check legacy format (string/ObjectId)
+            if (typeof booking === 'string' || (mongoose.Types.ObjectId.isValid(booking) && !booking.userId)) {
+                return booking.toString() === userId.toString();
+            }
+            // Check new format (object with userId)
+            if (booking && typeof booking === 'object' && booking.userId) {
+                return booking.userId.toString() === userId.toString();
+            }
+            return false;
+        });
         
-        // Check for new format bookings
-        const hasNewBooking = event.seatsBooked.some(booking => 
-            booking.userId && booking.userId.toString() === userId.toString()
-        );
-        
-        if (hasLegacyBooking || hasNewBooking) {
+        if (hasExistingBooking) {
             console.log('User already booked:', userId);
             return res.status(400).json({ 
                 success: false, 
@@ -1205,8 +1211,17 @@ const bookEventSingle = async (req, res) => {
             });
         }
         
-        // Add user to booked seats (legacy format for backward compatibility)
-        event.seatsBooked.push(userId);
+        // UPDATED: Add user to booked seats using new object format for consistency
+        const bookingEntry = {
+            userId: userId,
+            fullName: req.user?.fullName || req.user?.name || 'Unknown',
+            email: req.user?.email || '',
+            phone: req.user?.phone || '',
+            bookingDate: new Date(),
+            seatNumber: event.seatsBooked.length + 1
+        };
+        
+        event.seatsBooked.push(bookingEntry);
         await event.save();
         
         console.log('Single booking successful:', { 
@@ -1235,7 +1250,7 @@ const bookEventSingle = async (req, res) => {
     }
 };
 
-// Cancel event booking (enhanced to handle both formats)
+// FIXED: Cancel event booking (enhanced to handle both formats)
 const cancelBooking = async (req, res) => {
     try {
         const { id } = req.params; 
@@ -1258,21 +1273,21 @@ const cancelBooking = async (req, res) => {
             event.seatsBooked = [];
         }
         
-        // Find all bookings for this user (both formats)
+        // FIXED: Find all bookings for this user (both formats)
         const bookingsToRemove = [];
         
         event.seatsBooked.forEach((booking, index) => {
             let isUserBooking = false;
             
-            // Check if it's a legacy booking (string format)
-            if (typeof booking === 'string' || booking instanceof mongoose.Types.ObjectId) {
+            // Check if it's a legacy booking (string/ObjectId format)
+            if (typeof booking === 'string' || (mongoose.Types.ObjectId.isValid(booking) && !booking.userId)) {
                 if (booking.toString() === userId.toString()) {
                     isUserBooking = true;
                     console.log('Found legacy booking at index:', index);
                 }
             }
             // Check if it's a new format booking (object with userId)
-            else if (booking && booking.userId) {
+            else if (booking && typeof booking === 'object' && booking.userId) {
                 if (booking.userId.toString() === userId.toString()) {
                     isUserBooking = true;
                     console.log('Found new format booking at index:', index);
@@ -1336,7 +1351,7 @@ const cancelBooking = async (req, res) => {
     }
 };
 
-// Get user's booked events (enhanced to handle both formats)
+// FIXED: Get user's booked events (enhanced to handle both formats)
 const getMyBookedEvents = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -1365,11 +1380,11 @@ const getMyBookedEvents = async (req, res) => {
         
         const skip = (page - 1) * limit;
         
-        // Find events where user has booked (both legacy and new format)
+        // FIXED: Find events where user has booked (both legacy and new format)
         const events = await Event.find({
             $or: [
-                { seatsBooked: userId }, // Legacy format
-                { 'seatsBooked.userId': userId } // New format
+                { seatsBooked: userId }, // Legacy format (still works for string IDs)
+                { 'seatsBooked.userId': userId } // New format (object with userId)
             ],
             status: 'Published',
             ...dateFilter
@@ -1383,12 +1398,17 @@ const getMyBookedEvents = async (req, res) => {
         const eventsWithBookingDetails = events.map(event => {
             const eventObj = event.toObject();
             
-            // Find user's bookings in this event
+            // FIXED: Find user's bookings in this event
             const userBookings = event.seatsBooked.filter(booking => {
-                if (typeof booking === 'string') {
-                    return booking === userId.toString();
+                // Check legacy format
+                if (typeof booking === 'string' || (mongoose.Types.ObjectId.isValid(booking) && !booking.userId)) {
+                    return booking.toString() === userId.toString();
                 }
-                return booking.userId && booking.userId.toString() === userId.toString();
+                // Check new format
+                if (booking && typeof booking === 'object' && booking.userId) {
+                    return booking.userId.toString() === userId.toString();
+                }
+                return false;
             });
             
             eventObj.userBookingDetails = userBookings;
@@ -1426,7 +1446,7 @@ const getMyBookedEvents = async (req, res) => {
     }
 };
 
-// Check if user has booked an event (enhanced to handle both formats)
+// FIXED: Check if user has booked an event (enhanced to handle both formats)
 const checkBookingStatus = async (req, res) => {
     try {
         const { id } = req.params; 
@@ -1447,44 +1467,60 @@ const checkBookingStatus = async (req, res) => {
             event.seatsBooked = [];
         }
         
-        console.log('Event seatsBooked:', event.seatsBooked);
+        console.log('Event seatsBooked length:', event.seatsBooked.length);
+        console.log('First booking sample:', event.seatsBooked[0]);
         
-        // Count user bookings in both formats
+        // FIXED: Count user bookings in both formats
         let userBookingCount = 0;
         const userBookingDetails = [];
         
         event.seatsBooked.forEach((booking, index) => {
+            let isUserBooking = false;
+            
             // Check legacy format (string/ObjectId)
-            if (typeof booking === 'string' || booking instanceof mongoose.Types.ObjectId) {
+            if (typeof booking === 'string' || (mongoose.Types.ObjectId.isValid(booking) && !booking.userId)) {
                 if (booking.toString() === userId.toString()) {
-                    userBookingCount++;
+                    isUserBooking = true;
                     userBookingDetails.push({
                         type: 'legacy',
                         index: index,
                         userId: booking
                     });
+                    console.log('Found legacy booking match at index:', index);
                 }
             }
             // Check new format (object with userId)
-            else if (booking && booking.userId) {
+            else if (booking && typeof booking === 'object' && booking.userId) {
+                console.log('Comparing userIds:', {
+                    bookingUserId: booking.userId.toString(),
+                    currentUserId: userId.toString(),
+                    match: booking.userId.toString() === userId.toString()
+                });
+                
                 if (booking.userId.toString() === userId.toString()) {
-                    userBookingCount++;
+                    isUserBooking = true;
                     userBookingDetails.push({
                         type: 'detailed',
                         index: index,
-                        ...booking
+                        ...booking.toObject ? booking.toObject() : booking
                     });
+                    console.log('Found detailed booking match at index:', index);
                 }
+            }
+            
+            if (isUserBooking) {
+                userBookingCount++;
             }
         });
         
         const isBooked = userBookingCount > 0;
         const availableSeats = event.seats - event.seatsBooked.length;
         
-        console.log('Booking status result:', {
+        console.log('Final booking status result:', {
             isBooked,
             userBookingCount,
             availableSeats,
+            totalBookings: event.seatsBooked.length,
             userBookingDetails
         });
         
@@ -1510,7 +1546,7 @@ const checkBookingStatus = async (req, res) => {
     }
 };
 
-// Get event attendees (enhanced to handle both formats)
+// FIXED: Get event attendees (enhanced to handle both formats)
 const getEventAttendees = async (req, res) => {
     try {
         const { id } = req.params; 
@@ -1534,12 +1570,13 @@ const getEventAttendees = async (req, res) => {
             });
         }
         
-        // Separate legacy and new format bookings
+        // FIXED: Separate legacy and new format bookings
         const legacyBookings = [];
         const detailedBookings = [];
         
         for (const booking of event.seatsBooked) {
-            if (typeof booking === 'string') {
+            // Check for legacy format (string/ObjectId)
+            if (typeof booking === 'string' || (mongoose.Types.ObjectId.isValid(booking) && !booking.userId)) {
                 // Legacy booking - fetch user details
                 try {
                     const user = await User.findById(booking).select('name email fullName phone');
@@ -1555,10 +1592,11 @@ const getEventAttendees = async (req, res) => {
                 } catch (err) {
                     console.log('Could not fetch user details for legacy booking:', booking);
                 }
-            } else if (booking.userId) {
-                // New format booking
+            } 
+            // Check for new format (object with userId)
+            else if (booking && typeof booking === 'object' && booking.userId) {
                 detailedBookings.push({
-                    ...booking,
+                    ...booking.toObject ? booking.toObject() : booking,
                     bookingType: 'detailed'
                 });
             }
@@ -1586,7 +1624,6 @@ const getEventAttendees = async (req, res) => {
         });
     }
 };
-
 
 module.exports = {
     addEvent,
