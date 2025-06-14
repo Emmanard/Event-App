@@ -209,11 +209,18 @@ const resendOTP = asyncHandler(async (req, res) => {
 const forgotPassword = asyncHandler(async (req, res) => {
     const { email } = req.body;
     let user = await User.findOne({ email });
+    
     if (!user) {
-        return res.status(404).json({ success: false, message: "This email does not exists" })
+        return res.status(404).json({ success: false, message: "This email does not exist" });
     }
+
     const randomString = randomstring.generate();
     await User.updateOne({ email }, { $set: { resetPassToken: randomString } });
+
+    // Use FRONTEND_URL since the link should point to your React app
+    const frontendUrl = process.env.FRONTEND_URL;
+    const resetUrl = `${frontendUrl}/auth/reset-password/${randomString}/${email}`;
+
     const mailOptions = {
         from: {
             name: "Event Wave",
@@ -225,7 +232,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
                     <br />
                     We noticed that you requested a password reset for your EventWave account. To proceed, please click on the following link to reset your password:
                     <br/>
-                    <a href=${process.env.REACT_APP_EVENT_WAVE_URL + "auth/reset-password/" + randomString + "/" + email}>Reset Password</a>
+                    <a href="${resetUrl}">Reset Password</a>
                  </p>
                  <p>
                     For security reasons, please do not share this email with anyone.
@@ -234,13 +241,12 @@ const forgotPassword = asyncHandler(async (req, res) => {
                     <br/>
                     Best regards,
                     The EventWave Team
-                 </p>                
-                `
+                 </p>`
     };
-    await transporter.sendMail(mailOptions);
-    return res.status(200).json({ success: true, msg: "Please check your inbox." })
-});
 
+    await transporter.sendMail(mailOptions);
+    return res.status(200).json({ success: true, msg: "Please check your inbox." });
+});
 
 // reset password
 const resetPassword = asyncHandler(async (req, res) => {
