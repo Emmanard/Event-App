@@ -40,19 +40,19 @@ const { protect } = require("../middlewares/auth");
 // CORE BOOKING  ROUTES
 // ================================
 // Enhanced booking route (supports both single and bulk booking with form data)
-router.post('/book/:id', protect("attendee"), bookEvent);
+router.post('/book/:id', protect("organizer", "attendee"), bookEvent);
 
 // Legacy single booking route (for backward compatibility)
-router.post('/book-single/:id', protect("attendee"), bookEventSingle);
+router.post('/book-single/:id', protect("organizer", "attendee"), bookEventSingle);
 
 // Cancel booking - FIXED: Updated route path and middleware
-router.delete('/book/:id', protect("attendee"), cancelBooking);
+router.delete('/book/:id', protect("organizer", "attendee"), cancelBooking);
 
 // Get user's booked events
-router.get('/my-bookings', protect("attendee"), getMyBookedEvents);
+router.get('/my-bookings', protect("organizer", "attendee"), getMyBookedEvents);
 
 // Check booking status for an event - FIXED: Updated route path
-router.get('/booking-status/:id', protect("attendee"), checkBookingStatus);
+router.get('/booking-status/:id', protect("organizer", "attendee"), checkBookingStatus);
 
 // Get event attendees (for organizers only)
 router.get('/attendees/:id', protect("organizer"), getEventAttendees);

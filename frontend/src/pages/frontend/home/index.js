@@ -3,7 +3,6 @@ import HeroSection from './HeroSection'
 import './_home.scss'
 import Navbar from 'components/Navbar'
 import Footer from 'components/Footer'
-import Searchbar from './Searchbar'
 import PopularEvents from './PopularEvents'
 import HappyCustomers from './HappyCustomers'
 import Speakers from './Speakers'
@@ -20,7 +19,6 @@ export default function Index() {
         <>
             <Navbar />
             <HeroSection />
-            <Searchbar />
             <Services />
             <PopularEvents />
             <HappyCustomers />
