@@ -14,10 +14,20 @@ const userSchema = new mongoose.Schema({
         type: String,
         trim: true,
     },
-    idCard: {
-        type: Number,
-        maxlength: 13,
-        minlength: 13,
+    // Removed idCard field - replaced with phoneNumber
+    phoneNumber: {
+        type: String,
+        required: function() {
+            // Make phoneNumber required only for organizers
+            return this.role === 'organizer';
+        },
+        validate: {
+            validator: function(v) {
+                // Basic phone number validation (adjust regex as needed)
+                return !v || /^\+?[\d\s\-\(\)]{10,15}$/.test(v);
+            },
+            message: 'Please enter a valid phone number'
+        }
     },
     email: {
         type: String,
@@ -89,10 +99,14 @@ const userSchema = new mongoose.Schema({
     resetPassToken: {
         type: String
     }
-
 },
     { timestamps: true }
 );
+
+// Index for better query performance
+userSchema.index({ phoneNumber: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
 
 userSchema.methods.getJWToken = function () {
     const key = process.env.JWT_SECRET;

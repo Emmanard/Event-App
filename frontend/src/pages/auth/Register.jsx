@@ -7,7 +7,7 @@ const initialState = {
     firstName: "",
     lastName: "",
     email: "",
-    idCard: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
 }
@@ -22,24 +22,35 @@ export default function Register() {
         window.scroll(0, 0)
     }, [])
 
-
     const handleChange = e => {
         setState(s => ({ ...s, [e.target.name]: e.target.value }))
     }
+    
     const handleSubmit = e => {
         e.preventDefault();
-        const { firstName, lastName, email, idCard, password, confirmPassword } = state;
+        const { firstName, lastName, email, phoneNumber, password, confirmPassword } = state;
+        
         // verify email
         var validRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-        if (accountType === 2 && (idCard.length < 13 || idCard.length > 13)) {
-            return window.toastify("Please add valid ID card number. Only 13 digits are valid", "error");
+        
+        // Phone number validation for organizers
+        if (accountType === 2) {
+            if (!phoneNumber) {
+                return window.toastify("Please add phone number for organizer account", "error");
+            }
+            const phoneRegex = /^\+?[\d\s-()]{10,15}$/;
+            if (!phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+                return window.toastify("Please add a valid phone number", "error");
+            }
         }
+        
         if (!email.match(validRegex)) {
             return window.toastify("Please add valid email", "error");
         }
         if (password !== confirmPassword) {
             return window.toastify("Password doesn't match", "error");
         }
+        
         let role = accountType == 1 ? "attendee" : "organizer";
         let fullName = `${firstName} ${lastName}`;
         let body = {
@@ -48,7 +59,7 @@ export default function Register() {
             firstName,
             lastName,
             email,
-            idCard,
+            phoneNumber: accountType === 2 ? phoneNumber : undefined,
             password: confirmPassword,
         }
 
@@ -73,7 +84,6 @@ export default function Register() {
         } finally {
             setLoading(false)
         }
-
     }
 
     return (
@@ -126,8 +136,17 @@ export default function Register() {
                                                 </div>
                                             </div>
                                             {accountType === 2 && <div className="form-floating mb-3">
-                                                <input type="number" name="idCard" className="form-control shadow-none" id="name" placeholder="33100--------" value={state.idCard} onChange={handleChange} />
-                                                <label htmlFor="name" className="text-secondary">Enter ID Card Number</label>
+                                                <input 
+                                                    type="tel" 
+                                                    name="phoneNumber" 
+                                                    className="form-control shadow-none" 
+                                                    id="phone" 
+                                                    placeholder="+1234567890" 
+                                                    value={state.phoneNumber} 
+                                                    onChange={handleChange}
+                                                    required 
+                                                />
+                                                <label htmlFor="phone" className="text-secondary">Phone Number</label>
                                             </div>}
 
                                             <div className="form-floating mb-3">

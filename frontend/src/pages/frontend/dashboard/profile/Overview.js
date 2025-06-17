@@ -1,8 +1,16 @@
-
 import { Link } from 'react-router-dom';
-
+import { useAuthContext } from 'context/AuthContext'; 
 
 export default function Overview({ userData }) {
+    // Get user from auth context to check role
+    const { user } = useAuthContext();
+    const userRole = user?.role || 'attendee';
+    
+    // Get phone number for organizers only
+    const getPhoneNumber = () => {
+        return userData?.phoneNumber || 'Not provided';
+    };
+
     return (
         <div className='container-fluid ' id='overview-dashboard-section'>
             <div className="container px-3">
@@ -11,9 +19,12 @@ export default function Overview({ userData }) {
                         <div className="card rounded-1 p-3 py-4 border-0 shadow ">
                             <h6 className='fw-bold '>Info</h6><hr />
                             <div className='mb-3'><strong>Full Name: </strong> <span className='ms-3 text-secondary'>{userData?.fullName}</span></div>
-                            <div className='mb-3'><strong>Mobile: </strong> <span className='ms-3 text-secondary'>{userData?.phone}</span></div>
+                            {/* Show phone number only for organizers */}
+                            {userRole === 'organizer' && (
+                                <div className='mb-3'><strong>Phone: </strong> <span className='ms-3 text-secondary'>{getPhoneNumber()}</span></div>
+                            )}
                             <div className='mb-3'><strong>E-mail: </strong> <span className='ms-3 text-secondary'>{userData?.email}</span></div>
-                            <div className='mb-3'><strong>Location: </strong> <span className='ms-3 text-secondary'>{userData?.city}</span></div>
+                            {/* Remove location field as requested */}
                             <div><strong>Joining Date: </strong> <span className='ms-3 text-secondary'>{userData?.createdAt?.split('T')[0]}</span></div>
                         </div>
                         <div className="card rounded-1 p-3 py-4 border-0 shadow mt-4">

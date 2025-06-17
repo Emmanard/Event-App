@@ -14,10 +14,7 @@ export default function ProfileHeader({ userData }) {
             label: 'Overview',
             key: 'dashboard/profile',
         },
-        {
-            label: 'Activities',
-            key: 'dashboard/profile/activities',
-        },
+       
         {
             label: 'Events',
             key: 'dashboard/profile/events',

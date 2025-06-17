@@ -27,12 +27,17 @@ transporter.verify(function (error, success) {
 
 // register new user
 const registerUser = asyncHandler(async (req, res) => {
-    const { email, firstName, lastName, fullName, idCard, password, role } = req.body
-    if (!email || !fullName || (role == "organizer" && !idCard) || !password) {
+    const { email, firstName, lastName, fullName, phoneNumber, password, role } = req.body
+    if (!email || !fullName || (role == "organizer" && !phoneNumber) || !password) {
         return res.status(400).json({ message: "Please add all fields" })
     }
-    if (idCard && idCard.length !== 13) {
-        return res.status(400).json({ message: "Please add valid ID card number. Only 13 digits are valid" })
+    
+    // Phone number validation for organizers
+    if (phoneNumber && role === "organizer") {
+        const phoneRegex = /^\+?[\d\s-()]{10,15}$/;
+        if (!phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+            return res.status(400).json({ message: "Please add a valid phone number" })
+        }
     }
 
     try {
@@ -40,6 +45,15 @@ const registerUser = asyncHandler(async (req, res) => {
         if (userExist) {
             return res.status(400).json({ message: "User already exists" })
         }
+        
+        // Check if phone number already exists for organizers
+        if (role === "organizer" && phoneNumber) {
+            const phoneExists = await User.findOne({ phoneNumber })
+            if (phoneExists) {
+                return res.status(400).json({ message: "Phone number already registered" })
+            }
+        }
+        
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash(password, salt)
         let count = await User.find().sort({
@@ -53,7 +67,7 @@ const registerUser = asyncHandler(async (req, res) => {
             firstName,
             lastName,
             fullName,
-            idCard,
+            phoneNumber,
             role,
             userID: userId,
             password: hashedPassword,
@@ -88,7 +102,7 @@ const registerUser = asyncHandler(async (req, res) => {
             firstName: user.firstName,
             lastName: user.lastName,
             fullName: user.fullName,
-            idCard: user.idCard,
+            phoneNumber: user.phoneNumber,
             userID: user.userID,
             role: user.role,
         }
@@ -101,9 +115,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
 });
-
-
-// login user
+//login user
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email })
@@ -121,6 +133,7 @@ const loginUser = asyncHandler(async (req, res) => {
             firstName: user.firstName,
             lastName: user.lastName,
             userID: user.userID,
+            phoneNumber: user.phoneNumber, // Changed from idCard to phoneNumber
             role: user.role
         }
 
@@ -282,10 +295,30 @@ const getUser = asyncHandler(async (req, res) => {
 })
 
 
-// update user
 const updateUser = asyncHandler(async (req, res) => {
     let { id } = req.query;
     try {
+        // If phoneNumber is being updated, validate it
+        if (req.body.phoneNumber) {
+            const phoneRegex = /^\+?[\d\s-()]{10,15}$/;
+            if (!phoneRegex.test(req.body.phoneNumber.replace(/\s/g, ''))) {
+                return res.status(400).json({ message: "Please add a valid phone number" })
+            }
+            
+            // Check if phone number already exists for other users
+            const phoneExists = await User.findOne({ 
+                phoneNumber: req.body.phoneNumber, 
+                _id: { $ne: id } 
+            });
+            if (phoneExists) {
+                return res.status(400).json({ message: "Phone number already registered" })
+            }
+        }
+
+        // Remove idCard from update data if it exists
+        if (req.body.idCard) {
+            delete req.body.idCard;
+        }
 
         const updatedUser = await User.findByIdAndUpdate(id, req.body, { new: true })
         if (updatedUser) {
