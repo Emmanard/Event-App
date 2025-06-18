@@ -51,7 +51,7 @@ export default function Register() {
             return window.toastify("Password doesn't match", "error");
         }
         
-        let role = accountType == 1 ? "attendee" : "organizer";
+        let role = accountType === 1 ? "attendee" : "organizer";
         let fullName = `${firstName} ${lastName}`;
         let body = {
             role,
@@ -77,7 +77,7 @@ export default function Register() {
         } catch (error) {
             let msg = "Some error occured";
             let { status, data } = error.response;
-            if (status == 400 || status == 401 || status == 500) {
+            if (status === 400 || status === 401 || status === 500) {
                 msg = data.message;
                 window.toastify(msg, "error");
             }
