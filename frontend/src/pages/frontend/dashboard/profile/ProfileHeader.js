@@ -30,22 +30,11 @@ export default function ProfileHeader({ userData }) {
         setCurrent(e.key);
     };
 
-    // format followers and following
-    const formatNumber = (num) => {
-        num = num ? num : 0
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-        }
-        return num.toString();
-    };
-
     return (
         <div className="container-fluid bg-info" id='profile-section-dashboard'>
             <div className='container-fluid top-banner'>
                 <div className="container py-4 text-light">
-                    <div className="row row-cols-1 row-cols-md-2 basic-info mb-4">
+                    <div className="row mb-4">
                         <div className="col d-flex">
                             <div>
                                 <Avatar
@@ -68,16 +57,6 @@ export default function ProfileHeader({ userData }) {
                                     {userData?.city && <small className='me-2'><LocationOnOutlinedIcon fontSize='small' /> {userData?.city}</small>}
                                     {userData?.country && <small className='me-2'><PublicOutlinedIcon fontSize='small' /> {userData?.country}</small>}
                                 </p>
-                            </div>
-                        </div>
-                        <div className="col d-flex text-center justify-content-end">
-                            <div>
-                                <h5>{formatNumber(userData?.followers?.length)}</h5>
-                                <small className='text-white-50'>Followers</small>
-                            </div>
-                            <div className='ms-4'>
-                                <h5>{formatNumber(userData?.following?.length)}</h5>
-                                <small className='text-white-50'>Following</small>
                             </div>
                         </div>
                     </div>

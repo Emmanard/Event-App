@@ -73,10 +73,6 @@ export default function PersonalDetails() {
               <label htmlFor="lastName" className='mb-2'>Last Name</label>
               <Input placeholder="Enter your last name" value={lastName} onChange={e => setLastName(e.target.value)} id='lastName' size='large' />
             </div>
-            {user?.role === "organizer" && <div className="col-12">
-              <label htmlFor="idCard" className='mb-2'>ID Number</label>
-              <Input placeholder="Enter you ID card number" type='number' value={idCard} onChange={e => setIdCard(e.target.value)} id='idCard' size='large' />
-            </div>}
 
             <div className="col-12 col-md-6">
               <label htmlFor="phone" className='mb-2'>Phone Number</label>

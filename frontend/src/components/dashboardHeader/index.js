@@ -27,20 +27,9 @@ export default function Index({ collapsed, setCollapsed }) {
             >
               {collapsed ? <EastRoundedIcon /> : <MenuIcon />}
             </button>
-            <span className="d-none d-sm-inline">
-              <Input
-                size="large"
-                variant="filled"
-                placeholder="Search ..."
-                prefix={<SearchOutlinedIcon className="text-secondary" />}
-              />
-            </span>
+          
           </li>
-          <li className="nav-item me-3">
-            <a className="nav-link text-secondary">
-              <NotificationsNoneOutlinedIcon />
-            </a>
-          </li>
+         
           <li className="me-0 me-sm-2 me-md-0 ">
             {isAuthenticated ? (
               <Popover

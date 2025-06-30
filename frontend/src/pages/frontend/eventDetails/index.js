@@ -323,7 +323,7 @@ const handleBookEvent = async () => {
                                                                     <div className="col-md-6 text-md-end">
                                                                         <div className="mb-3">
                                                                             <h5 className="text-primary mb-0">
-                                                                                ₹{event?.ticketPrice || 0}
+                                                                                ₦{event?.ticketPrice || 0}
                                                                             </h5>
                                                                             <small className="text-muted">per ticket</small>
                                                                         </div>
@@ -356,13 +356,7 @@ const handleBookEvent = async () => {
                                                 <VisibilityTwoToneIcon className='text-secondary' fontSize='small' /> 
                                                 <small className='ms-2'>{formatNumber(event?.views?.length)} Views</small>
                                             </button>
-                                            <button style={{ width: "24%" }} className='btn btn-light d-flex justify-content-center flex-column flex-sm-row align-items-center' onClick={handleLikeEvent}>
-                                                {event?.likes?.some(item => item === user?._id)
-                                                    ? <FavoriteIcon className='text-danger' fontSize='small' />
-                                                    : <FavoriteTwoToneIcon className='text-danger' fontSize='small' />
-                                                }
-                                                <small className='ms-2'>{formatNumber(event?.likes?.length)} Likes</small>
-                                            </button>
+                                            
                                             <button style={{ width: "24%" }} onClick={() => commentRef.current.scrollIntoView({ behavior: 'smooth' })} className='btn btn-light d-flex justify-content-center flex-column flex-sm-row align-items-center'>
                                                 <ChatBubbleTwoToneIcon className='text-primary' fontSize='small' /> 
                                                 <small className='ms-2'>{formatNumber(event?.comments?.length)} Comments</small>
@@ -387,7 +381,7 @@ const handleBookEvent = async () => {
                                                 </h6>
                                                 <h6 className='text-warning mt-3 mb-5 text-end'>
                                                     <span className="text-dark">Ticket Price: </span> 
-                                                    ₹{event?.ticketPrice}
+                                                    ₦{event?.ticketPrice}
                                                 </h6>
                                             </div>
 
@@ -427,7 +421,7 @@ const handleBookEvent = async () => {
                 <p className="text-muted">
                     <strong>Event:</strong> {event?.title}<br />
                     <strong>Date:</strong> {moment(event?.date).format('MMM D, YYYY')}<br />
-                    <strong>Ticket Price:</strong> ₹{event?.ticketPrice}
+                    <strong>Ticket Price:</strong>  ₦{event?.ticketPrice}
                 </p>
             </Modal>
 

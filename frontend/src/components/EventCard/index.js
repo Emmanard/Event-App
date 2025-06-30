@@ -77,7 +77,7 @@ const EventCard = ({ event, className = "" }) => {
                     {/* Optional: Show ticket price if available */}
                     {event?.ticketPrice && (
                         <div className="mb-2">
-                            <span className="text-primary fw-bold">₹{event.ticketPrice}</span>
+                            <span className="text-primary fw-bold">₦{event.ticketPrice}</span>
                         </div>
                     )}
                     

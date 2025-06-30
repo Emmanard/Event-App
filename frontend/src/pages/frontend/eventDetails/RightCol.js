@@ -374,12 +374,7 @@ export default function RightCol({ event, user }) {
             </Link>
           </div>
           <div className="row mb-3">
-            <div className="col">
-              Followers: {formatNumber(event?.addedBy?.followers?.length)}
-            </div>
-            <div className="col">
-              Following: {formatNumber(event?.addedBy?.following?.length)}
-            </div>
+
           </div>
           <div>
             {event?.addedBy?.fullName && event?.addedBy?.fullName !== "" && (

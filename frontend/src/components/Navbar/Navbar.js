@@ -86,26 +86,22 @@ export default function Navbar() {
                   About
                 </Link>
               </li>
-              <li className="nav-item mx-2">
-                <Link className="nav-link" to="/upcoming">
-                  Upcoming
-                </Link>
-              </li>
               <li
-                className="nav-item mx-2 my-2 dropdown"
+                className="nav-item mx-2 dropdown"
                 onMouseOver={() => setDropdownOpen(true)}
                 onMouseLeave={() => setDropdownOpen(false)}
               >
-                <button
-                  className={`nav-link dropdown-toggle btn btn-link p-0 border-0 ${
+                <Link
+                  className={`nav-link dropdown-toggle ${
                     dropdownOpen ? "show" : ""
                   }`}
-                  type="button"
+                  to="#"
+                  role="button"
                   data-bs-toggle="dropdown"
                   aria-expanded={dropdownOpen ? "true" : "false"}
                 >
                   Categories
-                </button>
+                </Link>
                 <ul
                   className={`dropdown-menu pt-0 rounded-0 border-0 shadow ${
                     dropdownOpen ? "show" : ""
@@ -127,11 +123,6 @@ export default function Navbar() {
                     );
                   })}
                 </ul>
-              </li>
-              <li className="nav-item mx-2">
-                <Link className="nav-link" to="/gallery">
-                  Gallery
-                </Link>
               </li>
               <li className="nav-item mx-2">
                 <Link className="nav-link" to="/blogs">
