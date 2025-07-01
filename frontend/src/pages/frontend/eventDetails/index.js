@@ -4,7 +4,6 @@ import Navbar from 'components/Navbar';
 import Footer from 'components/Footer';
 import './_eventDetails.scss';
 import { 
-    addLike, 
     addView, 
     getEvent,
      bookEventSingle,
@@ -105,35 +104,7 @@ export default function Index() {
         return num.toString();
     };
 
-    const handleLikeEvent = async () => {
-        if (!user?._id) {
-            if (window.toastify) {
-                window.toastify("Please login to like this event", "warning");
-            }
-            return;
-        }
-
-        setLoading(true)
-        try {
-            let { data } = await addLike(id);
-            if (window.toastify) {
-                window.toastify(data?.msg, "success");
-            }
-            getEventData()
-        } catch (error) {
-            console.log(error);
-            let msg = "Some error occurred";
-            let { status, data } = error?.response;
-            if (status == 400 || status == 401 || status == 500 || status == 413 || status == 404) {
-                msg = data.message || data.msg;
-                if (window.toastify) {
-                    window.toastify(msg, "error");
-                }
-            }
-        } finally {
-            setLoading(false)
-        }
-    }
+    
 const handleBookEvent = async () => {
     // DEBUG: Check auth context
     console.log('🔍 BOOKING DEBUG:');
@@ -379,7 +350,7 @@ const handleBookEvent = async () => {
                                                     <span className="text-dark">Seats Left: </span> 
                                                     {bookingInfo.availableSeats}
                                                 </h6>
-                                                <h6 className='text-warning mt-3 mb-5 text-end'>
+                                                <h6 className='text-primary mt-3 mb-5 text-end'>
                                                     <span className="text-dark">Ticket Price: </span> 
                                                     ₦{event?.ticketPrice}
                                                 </h6>
