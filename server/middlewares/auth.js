@@ -1,27 +1,37 @@
+// Corrected protect middleware
 const trycatch = require('./tryCatch');
 const jwt = require("jsonwebtoken");
-const User = require('../models/User')
+const User = require('../models/User');
 
 module.exports.protect = (...roles) => trycatch(async (req, res, next) => {
+    // 1. Get token and verify it
     const jwtoken = req.headers.jwtoken;
-    const { id, role } = await jwt.verify(jwtoken, process.env.JWT_SECRET);
-    if (roles.includes(role)) {
-        if (role == "organizer") {
-            const organizer = await User.findOne({ _id: id, role });
-            if (!organizer) return res.status(401).json({ authorized: false });
-            organizer.role = role;
-            req.user = organizer;
-            next();
-        } else if (role == "attendee") {
-            const attendee = await User.findOne({ _id: id, role });
-
-            if (!attendee || !attendee.isActive)
-                return res.status(401).json({ authorized: false });
-            attendee.role = role;
-            req.user = attendee;
-            next();
-        }
-    } else {
-        return res.status(403).json({ permission: false });
+    if (!jwtoken) {
+        return res.status(401).json({ authorized: false, message: 'No token provided' });
     }
+
+    let decoded;
+    try {
+        decoded = jwt.verify(jwtoken, process.env.JWT_SECRET);
+    } catch (err) {
+        // If token is invalid or expired
+        return res.status(401).json({ authorized: false, message: 'Invalid or expired token' });
+    }
+
+    // 2. Find the user in the database
+    const user = await User.findById(decoded.id);
+    if (!user || (user.role !== 'attendee' && user.role !== 'organizer')) {
+        return res.status(401).json({ authorized: false, message: 'User not found or role is invalid' });
+    }
+
+    // 3. Attach the user object to the request
+    req.user = user;
+
+    // 4. Check for role-based authorization
+    if (roles.length > 0 && !roles.includes(user.role)) {
+        return res.status(403).json({ permission: false, message: 'Access denied' });
+    }
+
+    // 5. Proceed to the next middleware/controller
+    next();
 });

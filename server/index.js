@@ -19,6 +19,7 @@ const CheckEventStatus = require('./crobJob/Event');
 // routes
 const authRoutes = require('./routes/user');
 const eventRoutes = require('./routes/eventRoutes');
+const paymentRoutes = require('./routes/paymentRoutes'); // ADD THIS LINE
 
 // port
 const port = process.env.PORT || 5000;
@@ -34,9 +35,9 @@ app.use(express.static("public"));
 
 app.use(async (req, res, next) => {
     // More flexible header reading - checks multiple common formats
-    const apikey = req.headers.apikey || 
-                   req.headers['api-key'] || 
-                   req.headers['x-api-key'] ||
+    const apikey = req.headers.apikey ||
+                    req.headers['api-key'] ||
+                    req.headers['x-api-key'] ||
                    req.headers.authorization?.replace('Bearer ', '');
     
     const expectedApiKey = process.env.apikey;
@@ -79,6 +80,7 @@ cron.schedule('* * * * *', CheckEventStatus);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/event', eventRoutes);
+app.use('/api/v1/payments', paymentRoutes); // ADD THIS LINE
 app.use('/api/cloudinary', cloudinaryRoutes);
 app.use('/', (req, res) => {
     res.status(200).json({ msg: "helloo" })

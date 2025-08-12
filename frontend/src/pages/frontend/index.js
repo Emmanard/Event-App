@@ -8,6 +8,8 @@ import Contact from "pages/frontend/contact";
 import Upcoming from "pages/frontend/upcomingEvents";
 import Categories from "pages/frontend/categories";
 import PrivateRoute from "components/privateRoute/PrivateRoute";
+import PaymentVerification from "./payment/index";
+import MyEvents from "./dashboard/events/MyEvents";
 
 export default function index() {
   return (
@@ -24,6 +26,12 @@ export default function index() {
           path="/event/:id"
           element={<PrivateRoute Component={EventDetails} />}
         />
+        {/* FIXED: Use element prop instead of component, and match the redirect URL */}
+        <Route path="/payment-verification" element={<PaymentVerification />} />
+       
+         <Route path='/myEvents' element={<MyEvents />} />
+        {/* Optional: Add alternative route in case some systems use /payment/verify */}
+        <Route path="/payment/verify" element={<PaymentVerification />} />
       </Routes>
     </>
   );

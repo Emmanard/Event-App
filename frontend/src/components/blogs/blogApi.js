@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// RapidAPI configuration for Blogs API
 const RAPIDAPI_CONFIG = {
   baseURL: 'https://blogs-api1.p.rapidapi.com',
   headers: {
@@ -9,7 +8,6 @@ const RAPIDAPI_CONFIG = {
   }
 };
 
-// Fallback mock data for when API fails
 const MOCK_BLOGS = [
   {
     id: 'mock-1',
@@ -73,23 +71,14 @@ const MOCK_BLOGS = [
   }
 ];
 
-// API service functions
 export const blogApiService = {
-  // Transform API data with better error handling
   transformApiData(apiResponse) {
-    console.log('Raw API Response:', apiResponse);
-    
-    // Check for the correct nested structure
     const articles = apiResponse?.response?.articles || apiResponse?.articles || [];
     
-    console.log(`Found ${articles.length} articles to transform`);
-    
     if (!apiResponse || !articles || articles.length === 0) {
-      console.warn('No articles found in API response structure');
       return { success: false, articles: [] };
     }
 
-    // Transform articles to match component structure
     const transformedBlogs = articles.map((article, index) => ({
       id: article.source?.id || article.id || `article-${index}`,
       title: article.title || 'Untitled Article',
@@ -118,26 +107,20 @@ export const blogApiService = {
     };
   },
 
-  // Fetch blog posts with filtering and pagination
   async fetchBlogPosts(params = {}) {
     try {
-      // Check if API key is available
       const apiKey = process.env.REACT_APP_RAPIDAPI_KEY || 'c84d48bab2msh9d76608950dededp140d08jsnfc902094080c';
       
       if (!apiKey || apiKey === 'your-rapidapi-key-here') {
-        console.warn('No valid API key found, using mock data');
         return this.getMockData(params);
       }
 
-      // Prepare query parameters for the Blogs API
       const queryParams = new URLSearchParams({
         q: params.search || 'events planning technology',
         sortBy: params.sortBy === 'newest' ? 'latest' : 'popularity',
         from: params.fromDate || this.getDateDaysAgo(30),
         to: params.toDate || this.getTodayDate()
       });
-
-      console.log('API Request URL:', `${RAPIDAPI_CONFIG.baseURL}/get-blogs?${queryParams}`);
 
       const response = await fetch(`${RAPIDAPI_CONFIG.baseURL}/get-blogs?${queryParams}`, {
         method: 'GET',
@@ -148,24 +131,16 @@ export const blogApiService = {
       });
 
       if (!response.ok) {
-        console.warn(`API request failed with status: ${response.status}, falling back to mock data`);
         return this.getMockData(params);
       }
 
       const data = await response.json();
-      console.log('Full API Response:', data);
-      console.log('Response Status:', data.ok ? 'Success' : 'Failed');
-      console.log('Articles Count:', data.response?.articles?.length || data.articles?.length || 0);
-
-      // Transform the API response
       const transformResult = this.transformApiData(data);
       
       if (!transformResult.success || transformResult.articles.length === 0) {
-        console.warn('Transformation failed or no articles found, using mock data');
         return this.getMockData(params);
       }
 
-      // Implement client-side pagination
       const startIndex = ((params.page || 1) - 1) * (params.limit || 6);
       const endIndex = startIndex + (params.limit || 6);
       const paginatedBlogs = transformResult.articles.slice(startIndex, endIndex);
@@ -178,17 +153,13 @@ export const blogApiService = {
         usingApiData: true
       };
     } catch (error) {
-      console.error('Error fetching blog posts:', error);
-      console.warn('Falling back to mock data due to API error');
       return this.getMockData(params);
     }
   },
 
-  // Get mock data when API fails
   getMockData(params = {}) {
     let filteredBlogs = [...MOCK_BLOGS];
     
-    // Apply search filter
     if (params.search && params.search.trim()) {
       const searchTerm = params.search.toLowerCase();
       filteredBlogs = filteredBlogs.filter(blog => 
@@ -199,14 +170,12 @@ export const blogApiService = {
       );
     }
 
-    // Apply category filter
     if (params.category && params.category !== 'all') {
       filteredBlogs = filteredBlogs.filter(blog => 
         blog.category.toLowerCase() === params.category.toLowerCase()
       );
     }
 
-    // Apply sorting
     if (params.sortBy === 'oldest') {
       filteredBlogs.sort((a, b) => new Date(a.date) - new Date(b.date));
     } else if (params.sortBy === 'popular') {
@@ -215,7 +184,6 @@ export const blogApiService = {
       filteredBlogs.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
 
-    // Implement pagination
     const startIndex = ((params.page || 1) - 1) * (params.limit || 6);
     const endIndex = startIndex + (params.limit || 6);
     const paginatedBlogs = filteredBlogs.slice(startIndex, endIndex);
@@ -229,19 +197,16 @@ export const blogApiService = {
     };
   },
 
-  // Get today's date in YYYY-MM-DD format
   getTodayDate() {
     return new Date().toISOString().split('T')[0];
   },
 
-  // Get date N days ago in YYYY-MM-DD format
   getDateDaysAgo(days) {
     const date = new Date();
     date.setDate(date.getDate() - days);
     return date.toISOString().split('T')[0];
   },
 
-  // Get placeholder image based on category
   getPlaceholderImage(category) {
     const placeholders = {
       'Technology': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&h=400&fit=crop',
@@ -255,7 +220,6 @@ export const blogApiService = {
     return placeholders[category] || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&h=400&fit=crop';
   },
 
-  // Extract category from blog
   extractCategory(article) {
     const categories = ['Technology', 'Business', 'Health', 'Entertainment', 'Sports', 'Science'];
     const content = ((article.title || '') + ' ' + (article.description || '') + ' ' + (article.source?.name || '')).toLowerCase();
@@ -266,7 +230,6 @@ export const blogApiService = {
       }
     }
     
-    // Try to guess category from source name
     const sourceName = (article.source?.name || '').toLowerCase();
     if (sourceName.includes('tech') || sourceName.includes('verge')) return 'Technology';
     if (sourceName.includes('business') || sourceName.includes('insider')) return 'Business';
@@ -278,7 +241,6 @@ export const blogApiService = {
     return 'General';
   },
 
-  // Calculate estimated read time
   calculateReadTime(content) {
     if (!content) return '5 min read';
     const wordsPerMinute = 200;
@@ -287,16 +249,13 @@ export const blogApiService = {
     return `${minutes} min read`;
   },
 
-  // Extract tags from blog content
   extractTags(article) {
     const tags = [];
     
-    // Add source as a tag
     if (article.source?.name) {
       tags.push(article.source.name.replace(/\s+/g, ''));
     }
     
-    // Extract keywords from title
     const title = (article.title || '').toLowerCase();
     const commonKeywords = ['AI', 'tech', 'business', 'health', 'news', 'update', 'breaking'];
     
@@ -306,14 +265,12 @@ export const blogApiService = {
       }
     });
     
-    // Add category as tag
     tags.push(this.extractCategory(article));
     
-    return [...new Set(tags)].slice(0, 4); // Remove duplicates and limit to 4
+    return [...new Set(tags)].slice(0, 4);
   }
 };
 
-// Custom hook for managing blogs state and functionality
 export const useBlogsData = () => {
   const [blogs, setBlogs] = useState([]);
   const [featuredBlog, setFeaturedBlog] = useState(null);
@@ -333,7 +290,6 @@ export const useBlogsData = () => {
 
   const itemsPerPage = 6;
 
-  // Define loadBlogs function
   const loadBlogs = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -349,29 +305,21 @@ export const useBlogsData = () => {
         toDate: blogApiService.getTodayDate()
       };
 
-      console.log('Loading blogs with params:', params);
-
       const response = await blogApiService.fetchBlogPosts(params);
-      
-      
       
       setBlogs(response.blogs);
       setCategories(response.categories);
       setTotalPages(response.totalPages);
       
-      // Check if we're using mock data
       if (response.blogs.length > 0 && response.blogs[0].id?.startsWith('mock-')) {
         setUsingMockData(true);
       }
       
-      // Set featured blog
       const featured = response.blogs.find(blog => blog.featured) || response.blogs[0];
       setFeaturedBlog(featured);
       
     } catch (error) {
-      console.error('Error loading blogs:', error);
       setError(error.message);
-      // Use mock data as final fallback
       const mockResponse = blogApiService.getMockData({
         search: searchTerm.trim() || 'events',
         category: selectedCategory,
@@ -389,12 +337,10 @@ export const useBlogsData = () => {
     }
   }, [searchTerm, selectedCategory, sortBy, currentPage, itemsPerPage]);
 
-  // Initial load
   useEffect(() => {
     loadBlogs();
   }, [loadBlogs]);
 
-  // Debounced search
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
       setCurrentPage(1);
@@ -403,12 +349,10 @@ export const useBlogsData = () => {
     return () => clearTimeout(delayedSearch);
   }, [searchTerm]);
 
-  // Handle page changes
   useEffect(() => {
     loadBlogs();
   }, [currentPage, selectedCategory, sortBy]);
 
-  // Handler functions
   const handleLike = (blogId) => {
     setLikedPosts(prev => {
       const newSet = new Set(prev);
@@ -452,9 +396,7 @@ export const useBlogsData = () => {
     });
   };
 
-  // Return all state and handlers needed by the UI component
   return {
-    // State
     blogs,
     featuredBlog,
     loading,
@@ -472,7 +414,6 @@ export const useBlogsData = () => {
     usingMockData,
     itemsPerPage,
     
-    // Setters
     setSearchTerm,
     setSelectedCategory,
     setSortBy,
@@ -480,19 +421,16 @@ export const useBlogsData = () => {
     setCurrentPage,
     setShowFilters,
     
-    // Handlers
     handleLike,
     handleBookmark,
     handleReadMore,
     handleSearchClear,
     formatDate,
     
-    // Utility functions
     loadBlogs
   };
 };
 
-// Export utility functions that might be needed
 export const blogUtils = {
   formatDate: (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {

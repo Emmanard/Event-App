@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { delEvent, getMyEvents, updateEvent, getMyBookedEvents, cancelBooking } from 'services/event';
-import { Popconfirm, Switch, Button, Input, Space, Table, Tabs, Badge } from 'antd';
+import { delEvent, getMyEvents, updateEvent, getMyBookedEvents, cancelBooking, getPaymentHistory } from 'services/event';
+import { Popconfirm, Switch, Button, Input, Space, Table, Tabs, Badge, Tag } from 'antd';
 import Highlighter from 'react-highlight-words';
-import { SearchOutlined, QuestionCircleOutlined, CalendarOutlined, UserOutlined } from '@ant-design/icons';
+import { SearchOutlined, QuestionCircleOutlined, CalendarOutlined, UserOutlined, CreditCardOutlined, DollarOutlined } from '@ant-design/icons';
 import DeleteTwoToneIcon from '@mui/icons-material/DeleteTwoTone';
 import EditTwoToneIcon from '@mui/icons-material/EditTwoTone';
 import VisibilityTwoToneIcon from '@mui/icons-material/VisibilityTwoTone';
@@ -12,12 +12,14 @@ import ViewEvent from './ViewEvent';
 import CancelEvent from './CancelEvent';
 import { deleteFromCloudinary } from 'services/cloudinary';
 import { useAuthContext } from 'context/AuthContext';
+import moment from 'moment';
 const { TabPane } = Tabs;
 
 
 export default function MyEvents() {
     const [createdEvents, setCreatedEvents] = useState([]);
     const [bookedEvents, setBookedEvents] = useState([]);
+    const [paymentHistory, setPaymentHistory] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [searchedColumn, setSearchedColumn] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -79,18 +81,98 @@ export default function MyEvents() {
         }
     }, []);
 
-    // Fetch both created and booked events
-    const fetchAllEvents = useCallback(async () => {
-        await Promise.all([
-            getCreatedEvents(),
-            getBookedEventsData()
-        ]);
-    }, [getCreatedEvents, getBookedEventsData]);
+    // Enhanced get payment history with better error handling and data mapping
+    const getPaymentHistoryData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const { data } = await getPaymentHistory();
+            console.log('Payment history raw data:', data); // Debug log
+            
+            // Handle your specific API response structure
+            let paymentData = [];
+            if (data?.data?.payments) {
+                paymentData = Array.isArray(data.data.payments) ? data.data.payments : [data.data.payments];
+            } else if (data?.payments) {
+                paymentData = Array.isArray(data.payments) ? data.payments : [data.payments];
+            } else if (data?.data && Array.isArray(data.data)) {
+                paymentData = data.data;
+            } else if (Array.isArray(data)) {
+                paymentData = data;
+            }
+
+            console.log('Extracted payment data:', paymentData);
+
+            // Process payments - eventId is already populated as an object
+            const paymentsWithKeys = paymentData.map((payment, index) => {
+                console.log(`Processing payment ${index + 1}:`, {
+                    paymentId: payment._id,
+                    eventId: payment.eventId,
+                    amount: payment.amount,
+                    status: payment.status,
+                    reference: payment.reference
+                });
+
+                // eventId is already an object with event details
+                const eventDetails = payment.eventId;
+                console.log('Event details from eventId:', eventDetails);
+
+                const processedPayment = {
+                    ...payment,
+                    key: payment._id || payment.id || `payment_${index}`,
+                    eventType: 'payment',
+                    // Map fields with event details (eventId is already populated)
+                    eventTitle: eventDetails?.title || payment.bookingDetails?.eventTitle || 'Event Details Unavailable',
+                    eventDate: eventDetails?.date || payment.bookingDetails?.eventDate || null,
+                    eventId: typeof eventDetails === 'object' ? eventDetails._id || eventDetails.id : eventDetails,
+                    eventObject: eventDetails, // Keep the full event object
+                    reference: payment.reference,
+                    amount: payment.amount || 0,
+                    status: payment.status || 'unknown',
+                    createdAt: payment.createdAt || new Date().toISOString(),
+                    // Keep original event details for reference
+                    eventDetails: eventDetails
+                };
+                
+                console.log('Final processed payment:', processedPayment);
+                return processedPayment;
+            });
+
+            console.log('All processed payment data:', paymentsWithKeys);
+            setPaymentHistory(paymentsWithKeys || []);
+        } catch (error) {
+            console.log('Payment history error:', error);
+            handleError(error, "Failed to load payment history");
+            // Set empty array on error to prevent undefined issues
+            setPaymentHistory([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // Fetch all data based on active tab
+    const fetchDataForTab = useCallback(async (tabKey) => {
+        switch (tabKey) {
+            case 'created':
+                if (userRole === 'organizer') {
+                    await getCreatedEvents();
+                }
+                break;
+            case 'booked':
+                await getBookedEventsData();
+                break;
+            case 'payments':
+                await getPaymentHistoryData();
+                break;
+            default:
+                break;
+        }
+    }, [getCreatedEvents, getBookedEventsData, getPaymentHistoryData, userRole]);
 
     useEffect(() => {
         window.scroll(0, 0);
-        fetchAllEvents();
-    }, [fetchAllEvents]);
+        // Load data for current active tab
+        fetchDataForTab(activeTab);
+    }, [fetchDataForTab, activeTab]);
 
     // Handle tab change with role-based access control
     const handleTabChange = (key) => {
@@ -165,6 +247,36 @@ export default function MyEvents() {
             ) : displayText;
         },
     });
+
+    // Enhanced helper functions for payment display
+    const formatPaymentReference = (reference) => {
+        if (!reference) return 'N/A';
+        
+        // Handle different reference formats
+        if (reference.length > 20) {
+            return `${reference.substring(0, 10)}...${reference.substring(reference.length - 6)}`;
+        }
+        return reference.length > 15 ? `${reference.substring(0, 15)}...` : reference;
+    };
+
+    const getPaymentStatusInfo = (status) => {
+        const statusLower = (status || '').toLowerCase();
+        const statusMap = {
+            'successful': { label: 'Successful', color: 'success' },
+            'success': { label: 'Successful', color: 'success' },
+            'completed': { label: 'Completed', color: 'success' },
+            'confirmed': { label: 'Confirmed', color: 'success' },
+            'paid': { label: 'Paid', color: 'success' },
+            'pending': { label: 'Pending', color: 'warning' },
+            'processing': { label: 'Processing', color: 'processing' },
+            'failed': { label: 'Failed', color: 'error' },
+            'cancelled': { label: 'Cancelled', color: 'error' },
+            'canceled': { label: 'Cancelled', color: 'error' },
+            'refunded': { label: 'Refunded', color: 'default' },
+            'abandoned': { label: 'Abandoned', color: 'default' }
+        };
+        return statusMap[statusLower] || { label: status || 'Unknown', color: 'default' };
+    };
 
     const baseColumns = [
         { title: 'Title', dataIndex: 'title', key: 'title' },
@@ -375,6 +487,105 @@ export default function MyEvents() {
         },
     ];
 
+    // Enhanced columns for payment history
+    const paymentHistoryColumns = [
+        {
+            title: 'Event',
+            dataIndex: 'eventTitle',
+            key: 'eventTitle',
+            ...getColumnSearchProps('eventTitle'),
+            render: (text, record) => (
+                <div>
+                    <strong>{text || 'Event Details Unavailable'}</strong>
+                    {record.eventDetails?.date && (
+                        <>
+                            <br />
+                            <small className="text-muted">
+                                <CalendarOutlined className="me-1" />
+                                {moment(record.eventDetails.date).format('MMM D, YYYY')}
+                            </small>
+                        </>
+                    )}
+                    {record.eventDetails?.category && (
+                        <>
+                            <br />
+                            <small className="text-info">
+                                {record.eventDetails.category}
+                            </small>
+                        </>
+                    )}
+                </div>
+            ),
+        },
+        {
+            title: 'Payment Reference',
+            dataIndex: 'reference',
+            key: 'reference',
+            ...getColumnSearchProps('reference'),
+            render: (reference) => (
+                <code style={{ fontSize: '12px' }}>
+                    {formatPaymentReference(reference)}
+                </code>
+            ),
+        },
+        {
+            title: 'Amount',
+            dataIndex: 'amount',
+            key: 'amount',
+            render: (amount) => (
+                <span className="text-success">
+                    ₦{(amount || 0).toLocaleString()}
+                </span>
+            ),
+        },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            key: 'status',
+            render: (status) => {
+                const statusInfo = getPaymentStatusInfo(status);
+                return (
+                    <Tag color={statusInfo.color}>
+                        {statusInfo.label}
+                    </Tag>
+                );
+            },
+        },
+        {
+            title: 'Payment Date',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: (date) => {
+                return date ? moment(date).format('MMM D, YYYY h:mm A') : 'N/A';
+            },
+        },
+        {
+            title: 'Actions',
+            key: 'actions',
+            render: (_, record) => {
+                // Use the processed eventId (which should be the actual ID string)
+                const eventId = record.eventId || record.eventObject?._id || record.eventObject?.id;
+                return (
+                    <div className='d-flex justify-content-start align-items-center'>
+                        {eventId ? (
+                            <Button 
+                                type='link' 
+                                onClick={() => navigate(`/event/${eventId}`)}
+                                className='d-flex align-items-center justify-content-center'
+                                title="View Event"
+                            >
+                                <VisibilityTwoToneIcon fontSize='small' className="me-1" />
+                                View Event
+                            </Button>
+                        ) : (
+                            <span className="text-muted">Event not available</span>
+                        )}
+                    </div>
+                );
+            },
+        },
+    ];
+
     const handleStatus = async (record) => {
         const statusMap = { "Published": "Draft", "Draft": "Published" };
         const newStatus = statusMap[record?.status];
@@ -442,32 +653,83 @@ export default function MyEvents() {
         }
     };
 
-    const renderTabContent = (events, columns) => (
-        <div className="row">
-            <div className="col" style={{ overflow: "auto" }}>
-                {isLoading ? (
-                    <div className='my-5 text-center'>
-                        <div className="spinner-grow spinner-grow-sm bg-info"></div>
-                        <div className="spinner-grow spinner-grow-sm bg-warning mx-3"></div>
-                        <div className="spinner-grow spinner-grow-sm bg-info"></div>
-                    </div>
-                ) : (
-                    <Table 
-                        columns={columns} 
-                        dataSource={events}
-                        rowKey={(record) => record.key || record._id}
-                        pagination={{
-                            pageSize: 10,
-                            showSizeChanger: true,
-                            showQuickJumper: true,
-                            showTotal: (total, range) => 
-                                `${range[0]}-${range[1]} of ${total} events`
-                        }}
-                    />
-                )}
+    // Enhanced renderTabContent with debug info and empty states
+    const renderTabContent = (events, columns) => {
+        // Add debug info for payment history
+        if (activeTab === 'payments') {
+            console.log('Rendering payment history with events:', events);
+            console.log('Using columns:', columns.map(col => col.key));
+        }
+        
+        return (
+            <div className="row">
+                <div className="col" style={{ overflow: "auto" }}>
+                    {isLoading ? (
+                        <div className='my-5 text-center'>
+                            <div className="spinner-grow spinner-grow-sm bg-info"></div>
+                            <div className="spinner-grow spinner-grow-sm bg-warning mx-3"></div>
+                            <div className="spinner-grow spinner-grow-sm bg-info"></div>
+                        </div>
+                    ) : events.length === 0 ? (
+                        <div className="text-center py-5">
+                            <div className="mb-3">
+                                {activeTab === 'payments' && <CreditCardOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />}
+                                {activeTab === 'booked' && <CalendarOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />}
+                                {activeTab === 'created' && <UserOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />}
+                            </div>
+                            <h4>No {activeTab === 'payments' ? 'Payment History' : activeTab === 'booked' ? 'Booked Events' : 'Created Events'} Found</h4>
+                            <p className="text-muted">
+                                {activeTab === 'payments' && "You haven't made any payments yet."}
+                                {activeTab === 'booked' && "You haven't booked any events yet."}
+                                {activeTab === 'created' && "You haven't created any events yet."}
+                            </p>
+                        </div>
+                    ) : (
+                        <Table 
+                            columns={columns} 
+                            dataSource={events}
+                            rowKey={(record) => record.key || record._id || record.id}
+                            pagination={{
+                                pageSize: 10,
+                                showSizeChanger: true,
+                                showQuickJumper: true,
+                                showTotal: (total, range) => 
+                                    `${range[0]}-${range[1]} of ${total} ${activeTab === 'payments' ? 'payments' : 'events'}`
+                            }}
+                            scroll={{ x: 800 }} // Add horizontal scroll for better mobile experience
+                        />
+                    )}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    // Add error boundary for the payment history tab
+    const PaymentHistoryTab = () => {
+        try {
+            return renderTabContent(paymentHistory, paymentHistoryColumns);
+        } catch (error) {
+            console.error('Error rendering payment history:', error);
+            return (
+                <div className="text-center py-5">
+                    <div className="mb-3">
+                        <CreditCardOutlined style={{ fontSize: '48px', color: '#ff4d4f' }} />
+                    </div>
+                    <h4>Error Loading Payment History</h4>
+                    <p className="text-muted">
+                        There was an error loading your payment history. Please try again later.
+                    </p>
+                    <Button 
+                        type="primary" 
+                        onClick={() => getPaymentHistoryData()}
+                        className="mt-2"
+                    >
+                        Retry
+                    </Button>
+                </div>
+            );
+        }
+    };
 
     return (
         <div className="container">
@@ -521,6 +783,19 @@ export default function MyEvents() {
                     key="booked"
                 >
                     {renderTabContent(bookedEvents, bookedEventsColumns)}
+                </TabPane>
+
+                <TabPane 
+                    tab={
+                        <span>
+                            <CreditCardOutlined />
+                            Payment History
+                            <Badge count={paymentHistory.length} style={{ marginLeft: 8 }} />
+                        </span>
+                    } 
+                    key="payments"
+                >
+                    <PaymentHistoryTab />
                 </TabPane>
             </Tabs>
 

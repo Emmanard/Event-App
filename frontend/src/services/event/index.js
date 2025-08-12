@@ -472,16 +472,371 @@ export const getEventAttendees = (id) => {
 };
 
 // ================================
+// PAYMENT ROUTES (ENHANCED)
+// ================================
+
+/**
+ * Initialize Paystack payment for an event with full booking details
+ * @param {string} eventId - Event ID
+ * @param {object} paymentData - Payment and booking details
+ * @param {number} paymentData.quantity - Number of tickets
+ * @param {string} paymentData.fullName - Full name for booking
+ * @param {string} paymentData.email - Email for payment and booking
+ * @param {string} paymentData.phone - Phone number
+ */
+export const initializePayment = (eventId, paymentData) => {
+  return post(`${root}/api/v1/payments/initialize/${eventId}`, paymentData);
+};
+
+/**
+ * Verify Paystack payment and complete booking automatically
+ * @param {string} reference - Payment reference from Paystack
+ */
+export const verifyPayment = (reference) => {
+  return get(`${root}/api/v1/payments/verify/${reference}`);
+};
+
+/**
+ * Get payment status using reference
+ * @param {string} reference - Payment reference
+ */
+export const getPaymentStatus = (reference) => {
+  return get(`${root}/api/v1/payments/status/${reference}`);
+};
+
+/**
+ * Get user's complete payment history with event details
+ * @param {object} params - Query parameters
+ * @param {number} params.page - Page number
+ * @param {number} params.limit - Items per page
+ * @param {string} params.status - Filter by payment status
+ */
+export const getPaymentHistory = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return get(`${root}/api/v1/payments/history${queryString ? `?${queryString}` : ""}`);
+};
+
+/**
+ * Handle Paystack webhook (for internal use)
+ * @param {object} webhookData - Webhook payload from Paystack
+ */
+export const handlePaymentWebhook = (webhookData) => {
+  return post(`${root}/api/v1/payments/webhook`, webhookData);
+};
+
+// ================================
+// PAYMENT UTILITY FUNCTIONS
+// ================================
+
+/**
+ * Calculate total cost including processing fees
+ * @param {number} ticketPrice - Base ticket price
+ * @param {number} quantity - Number of tickets
+ * @param {number} feePercentage - Processing fee percentage (default 1.5%)
+ * @param {number} minimumFee - Minimum processing fee (default 100 kobo)
+ */
+export const calculateTotalCost = (ticketPrice, quantity = 1, feePercentage = 1.5, minimumFee = 100) => {
+  const subtotal = ticketPrice * quantity;
+  const processingFee = Math.max(subtotal * (feePercentage / 100), minimumFee);
+  const totalAmount = subtotal + processingFee;
+  
+  return {
+    subtotal,
+    processingFee,
+    totalAmount,
+    breakdown: {
+      ticketPrice,
+      quantity,
+      subtotal,
+      processingFee,
+      total: totalAmount
+    }
+  };
+};
+
+/**
+ * Validate payment data before initialization
+ * @param {object} paymentData - Payment data to validate
+ * @param {object} event - Event data for validation
+ */
+export const validatePaymentData = (paymentData, event) => {
+  const errors = {};
+  
+  // Required fields validation
+  if (!paymentData.fullName?.trim()) {
+    errors.fullName = "Full name is required for booking";
+  }
+  
+  if (!paymentData.email?.trim()) {
+    errors.email = "Email is required for payment";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paymentData.email)) {
+    errors.email = "Please enter a valid email address";
+  }
+  
+  if (!paymentData.phone?.trim()) {
+    errors.phone = "Phone number is required for booking";
+  }
+  
+  if (!paymentData.quantity || paymentData.quantity < 1) {
+    errors.quantity = "At least 1 ticket must be selected";
+  }
+  
+  // Event-specific validations
+  if (event) {
+    const availableSeats = event.seats - (event.seatsBooked?.length || 0);
+    
+    if (paymentData.quantity > availableSeats) {
+      errors.quantity = `Only ${availableSeats} seats available`;
+    }
+    
+    // Check event status
+    if (event.status !== 'Published') {
+      errors.event = "Event is not available for booking";
+    }
+    
+    // Check event date
+    if (new Date(event.date) < new Date()) {
+      errors.event = "Cannot book tickets for past events";
+    }
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+};
+
+/**
+ * Format payment reference for display
+ * @param {string} reference - Payment reference
+ */
+export const formatPaymentReference = (reference) => {
+  if (!reference) return "";
+  
+  // EVT_1234567890_ABCD1234 -> EVT-1234...D1234
+  const parts = reference.split('_');
+  if (parts.length === 3) {
+    const [prefix, timestamp, random] = parts;
+    const shortTimestamp = timestamp.slice(-4);
+    const shortRandom = random.slice(0, 4);
+    return `${prefix}-${shortTimestamp}...${shortRandom}`;
+  }
+  
+  return reference;
+};
+
+/**
+ * Get payment status display info
+ * @param {string} status - Payment status
+ */
+export const getPaymentStatusInfo = (status) => {
+  const statusMap = {
+    pending: {
+      label: "Pending",
+      color: "warning",
+      icon: "clock",
+      description: "Payment is being processed"
+    },
+    successful: {
+      label: "Successful",
+      color: "success",
+      icon: "check-circle",
+      description: "Payment completed successfully"
+    },
+    failed: {
+      label: "Failed",
+      color: "danger",
+      icon: "x-circle",
+      description: "Payment was not successful"
+    },
+    abandoned: {
+      label: "Abandoned",
+      color: "secondary",
+      icon: "minus-circle",
+      description: "Payment was not completed"
+    }
+  };
+  
+  return statusMap[status] || {
+    label: "Unknown",
+    color: "secondary",
+    icon: "help-circle",
+    description: "Unknown payment status"
+  };
+};
+
+// ================================
+// ENHANCED BOOKING WITH PAYMENT
+// ================================
+
+/**
+ * Complete booking flow with payment
+ * @param {string} eventId - Event ID
+ * @param {object} bookingData - Complete booking information
+ */
+export const bookEventWithPayment = async (eventId, bookingData) => {
+  try {
+    const eventResponse = await getEvent(eventId);
+    const event = eventResponse?.data?.data;
+    
+    if (!event || !event.date || !event.status) {
+      throw new Error('Validation failed: Event data is incomplete.');
+    }
+    
+    const validation = validatePaymentData(bookingData, event);
+    
+    if (!validation.isValid) {
+      throw new Error(`Validation failed: ${Object.values(validation.errors).join(', ')}`);
+    }
+    
+    const response = await initializePayment(eventId, bookingData);
+    
+    if (!response || !response.data) {
+      throw new Error('Failed to initialize payment: No data received.');
+    }
+    
+    const paymentResponse = response.data;
+    
+    if (!paymentResponse.success) {
+      throw new Error(paymentResponse.message || 'Failed to initialize payment');
+    }
+    
+    return {
+      success: true,
+      paymentUrl: paymentResponse.data.paymentUrl,
+      reference: paymentResponse.data.reference,
+      amount: paymentResponse.data.amount,
+      eventTitle: paymentResponse.data.eventTitle
+    };
+    
+  } catch (error) {
+    throw error;
+  }
+};
+/**
+ * Check and complete payment verification
+ * @param {string} reference - Payment reference from URL params
+ */
+export const completePaymentAndBooking = async (reference) => {
+  try {
+    
+    const verificationResponse = await verifyPayment(reference);
+    
+    let isSuccess = false;
+    let bookingData = null;
+    let message = '';
+    
+    if (verificationResponse) {
+      if (verificationResponse.success === true) {
+        isSuccess = true;
+        bookingData = verificationResponse.data;
+        message = verificationResponse.message;
+      }
+      else if (verificationResponse.data && verificationResponse.data.success === true) {
+        isSuccess = true;
+        bookingData = verificationResponse.data.data || verificationResponse.data;
+        message = verificationResponse.data.message || verificationResponse.message;
+      }
+      else if (verificationResponse.status === true || verificationResponse.status === 'success') {
+        isSuccess = true;
+        bookingData = verificationResponse.data || verificationResponse;
+        message = verificationResponse.message || 'Payment verified successfully';
+      }
+      else if (verificationResponse.status >= 200 && verificationResponse.status < 300) {
+        isSuccess = true;
+        bookingData = verificationResponse.data;
+        message = verificationResponse.message || 'Payment verified successfully';
+      }
+      else if (verificationResponse.data && Object.keys(verificationResponse.data).length > 0) {
+        isSuccess = true;
+        bookingData = verificationResponse.data;
+        message = 'Payment verified successfully';
+      }
+    }
+    
+    if (!isSuccess) {
+      const errorMessage = verificationResponse?.message || 
+                          verificationResponse?.data?.message || 
+                          'Payment verification failed';
+      throw new Error(errorMessage);
+    }
+    
+    return {
+      success: true,
+      booking: bookingData,
+      message: message || 'Booking completed successfully'
+    };
+    
+  } catch (error) {
+    
+    if (error.message === 'Payment verification failed' && !error.context) {
+      error.context = 'Payment verification response did not indicate success';
+    }
+    
+    throw error;
+  }
+};
+// ================================
+// PAYMENT POLLING FOR REAL-TIME UPDATES
+// ================================
+
+/**
+ * Poll payment status until completion or timeout
+ * @param {string} reference - Payment reference
+ * @param {number} maxAttempts - Maximum polling attempts
+ * @param {number} interval - Polling interval in milliseconds
+ */
+export const pollPaymentStatus = async (reference, maxAttempts = 30, interval = 2000) => {
+  let attempts = 0;
+  
+  return new Promise((resolve, reject) => {
+    const poll = async () => {
+      try {
+        attempts++;
+        const response = await getPaymentStatus(reference);
+        
+        if (response.success) {
+          const status = response.data.status;
+          
+          // Terminal states
+          if (['successful', 'failed', 'abandoned'].includes(status)) {
+            resolve(response);
+            return;
+          }
+        }
+        
+        // Continue polling if not terminal state and within max attempts
+        if (attempts < maxAttempts) {
+          setTimeout(poll, interval);
+        } else {
+          reject(new Error('Payment status polling timeout'));
+        }
+        
+      } catch (error) {
+        if (attempts < maxAttempts) {
+          setTimeout(poll, interval);
+        } else {
+          reject(error);
+        }
+      }
+    };
+    
+    poll();
+  });
+};
+
 // UTILITY FUNCTIONS FOR BOOKING
 // ================================
 
 export const isEventBookable = (event) => {
-  if (!event) return false;
+  if (!event) {
+    return false;
+  }
 
   const now = new Date();
   const eventDate = new Date(event.date);
-  const availableSeats = event.seats - (event.seatsBooked?.length || 0);
-
+  const availableSeats = (event.seats || 0) - (event.seatsBooked?.length || 0);
+  
   return event.status === "Published" && eventDate > now && availableSeats > 0;
 };
 
@@ -541,9 +896,7 @@ export const handleBooking = async (id, formData = {}, useLegacy = false) => {
     }
     return await bookEvent(id, formData);
   } catch (error) {
-    // Fallback to single booking if enhanced booking fails
     if (!useLegacy) {
-      console.warn('Enhanced booking failed, falling back to single booking:', error);
       return await bookEventSingle(id);
     }
     throw error;
@@ -565,7 +918,6 @@ export const checkMultipleBookingStatus = async (eventIds) => {
       return acc;
     }, {});
   } catch (error) {
-    console.error('Error checking multiple booking statuses:', error);
     return {};
   }
 };
