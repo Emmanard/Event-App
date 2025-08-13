@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { delEvent, getMyEvents, updateEvent, getMyBookedEvents, cancelBooking, getPaymentHistory } from 'services/event';
-import { Popconfirm, Switch, Button, Input, Space, Table, Tabs, Badge, Tag } from 'antd';
+import { Popconfirm, Switch, Button, Input, Space, Table, Tabs, Badge, Tag, Tooltip } from 'antd';
 import Highlighter from 'react-highlight-words';
-import { SearchOutlined, QuestionCircleOutlined, CalendarOutlined, UserOutlined, CreditCardOutlined, DollarOutlined } from '@ant-design/icons';
+import { SearchOutlined, QuestionCircleOutlined, CalendarOutlined, UserOutlined, CreditCardOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import DeleteTwoToneIcon from '@mui/icons-material/DeleteTwoTone';
 import EditTwoToneIcon from '@mui/icons-material/EditTwoTone';
 import VisibilityTwoToneIcon from '@mui/icons-material/VisibilityTwoTone';
 import ExitToAppTwoToneIcon from '@mui/icons-material/ExitToAppTwoTone';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ViewEvent from './ViewEvent';
 import CancelEvent from './CancelEvent';
 import { deleteFromCloudinary } from 'services/cloudinary';
@@ -27,23 +27,40 @@ export default function MyEvents() {
     const [openModal, setOpenModal] = useState(false);
     const [openCancelModal, setOpenCancelModal] = useState(false);
     const [modalEventId, setModalEventId] = useState("");
-    const [activeTab, setActiveTab] = useState("created");
     const searchInput = useRef(null);
     const navigate = useNavigate();
-    
+    const location = useLocation();
+
     // Get user from auth context
     const { user } = useAuthContext();
-    const userRole = user?.role || 'attendee'; // Default to attendee if role not found
+    const userRole = user?.role || 'attendee';
+
+  const getInitialTab = () => {
+        const urlTab = new URLSearchParams(location.search).get('tab');
+        
+        if (urlTab) {
+            // If URL specifies a tab, use it (unless it's 'created' and user is not organizer)
+            if (urlTab === 'created' && userRole !== 'organizer') {
+                // If URL wants 'created' tab but user is not organizer, default to 'booked'
+                return 'booked';
+            }
+            return urlTab;
+        }
+        
+        // If no URL tab specified, default based on user role
+        return userRole === 'organizer' ? 'created' : 'booked';
+    };
+
+    const [activeTab, setActiveTab] = useState(getInitialTab());
 
     const handleError = (error, defaultMsg = "Some error occurred") => {
         const { status, data } = error.response || {};
-        const msg = [400, 401, 404, 413, 500].includes(status) 
-            ? (data?.message || data?.msg) 
+        const msg = [400, 401, 404, 413, 500].includes(status)
+            ? (data?.message || data?.msg)
             : defaultMsg;
         window.toastify(msg, "error");
     };
 
-    // Get created events (for organizers)
     const getCreatedEvents = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -62,11 +79,10 @@ export default function MyEvents() {
         }
     }, []);
 
-    // Get booked events (for attendees)
     const getBookedEventsData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const { data } = await getMyBookedEvents(); // Using your existing API
+            const { data } = await getMyBookedEvents();
             const eventsWithKeys = data?.data?.map(event => ({
                 ...event,
                 key: `booked_${event._id || event.id}`,
@@ -81,14 +97,10 @@ export default function MyEvents() {
         }
     }, []);
 
-    // Enhanced get payment history with better error handling and data mapping
     const getPaymentHistoryData = useCallback(async () => {
         setIsLoading(true);
         try {
             const { data } = await getPaymentHistory();
-            console.log('Payment history raw data:', data); // Debug log
-            
-            // Handle your specific API response structure
             let paymentData = [];
             if (data?.data?.payments) {
                 paymentData = Array.isArray(data.data.payments) ? data.data.payments : [data.data.payments];
@@ -100,56 +112,34 @@ export default function MyEvents() {
                 paymentData = data;
             }
 
-            console.log('Extracted payment data:', paymentData);
-
-            // Process payments - eventId is already populated as an object
             const paymentsWithKeys = paymentData.map((payment, index) => {
-                console.log(`Processing payment ${index + 1}:`, {
-                    paymentId: payment._id,
-                    eventId: payment.eventId,
-                    amount: payment.amount,
-                    status: payment.status,
-                    reference: payment.reference
-                });
-
-                // eventId is already an object with event details
                 const eventDetails = payment.eventId;
-                console.log('Event details from eventId:', eventDetails);
-
                 const processedPayment = {
                     ...payment,
                     key: payment._id || payment.id || `payment_${index}`,
                     eventType: 'payment',
-                    // Map fields with event details (eventId is already populated)
                     eventTitle: eventDetails?.title || payment.bookingDetails?.eventTitle || 'Event Details Unavailable',
                     eventDate: eventDetails?.date || payment.bookingDetails?.eventDate || null,
                     eventId: typeof eventDetails === 'object' ? eventDetails._id || eventDetails.id : eventDetails,
-                    eventObject: eventDetails, // Keep the full event object
+                    eventObject: eventDetails,
                     reference: payment.reference,
                     amount: payment.amount || 0,
                     status: payment.status || 'unknown',
                     createdAt: payment.createdAt || new Date().toISOString(),
-                    // Keep original event details for reference
                     eventDetails: eventDetails
                 };
-                
-                console.log('Final processed payment:', processedPayment);
                 return processedPayment;
             });
-
-            console.log('All processed payment data:', paymentsWithKeys);
             setPaymentHistory(paymentsWithKeys || []);
         } catch (error) {
             console.log('Payment history error:', error);
             handleError(error, "Failed to load payment history");
-            // Set empty array on error to prevent undefined issues
             setPaymentHistory([]);
         } finally {
             setIsLoading(false);
         }
     }, []);
 
-    // Fetch all data based on active tab
     const fetchDataForTab = useCallback(async (tabKey) => {
         switch (tabKey) {
             case 'created':
@@ -168,22 +158,34 @@ export default function MyEvents() {
         }
     }, [getCreatedEvents, getBookedEventsData, getPaymentHistoryData, userRole]);
 
+    // This useEffect will run when `activeTab` changes (either on initial load or from a user click).
     useEffect(() => {
         window.scroll(0, 0);
-        // Load data for current active tab
         fetchDataForTab(activeTab);
     }, [fetchDataForTab, activeTab]);
 
-    // Handle tab change with role-based access control
     const handleTabChange = (key) => {
         if (key === 'created' && userRole !== 'organizer') {
-            // Show popup message for non-organizers
             window.toastify("Only organizers can create events. Please upgrade your account to become an organizer.", "warning");
-            return; // Don't change the tab
+            return; // Prevent tab change
         }
         setActiveTab(key);
+        // Update URL when tab changes
+        navigate(`?tab=${key}`, { replace: true });
     };
 
+    // IMPORTANT: Update the useEffect to handle URL changes properly
+    useEffect(() => {
+        const urlTab = new URLSearchParams(location.search).get('tab');
+        if (urlTab && urlTab !== activeTab) {
+            // Only change tab if URL tab is accessible to user
+            if (urlTab === 'created' && userRole !== 'organizer') {
+                // Don't change to created tab for non-organizers
+                return;
+            }
+            setActiveTab(urlTab);
+        }
+    }, [location.search, userRole, activeTab]);
     const handleSearch = (selectedKeys, confirm, dataIndex) => {
         confirm();
         setSearchText(selectedKeys[0]);
@@ -248,11 +250,8 @@ export default function MyEvents() {
         },
     });
 
-    // Enhanced helper functions for payment display
     const formatPaymentReference = (reference) => {
         if (!reference) return 'N/A';
-        
-        // Handle different reference formats
         if (reference.length > 20) {
             return `${reference.substring(0, 10)}...${reference.substring(reference.length - 6)}`;
         }
@@ -286,10 +285,9 @@ export default function MyEvents() {
         { title: 'Date', dataIndex: 'date', key: 'date' },
     ];
 
-    // Columns for created events (organizer view)
     const createdEventsColumns = [
-        ...baseColumns.map((col, index) => ({ 
-            ...col, 
+        ...baseColumns.map((col, index) => ({
+            ...col,
             ...getColumnSearchProps(col.dataIndex),
             key: col.key || `created-col-${index}`
         })),
@@ -321,9 +319,9 @@ export default function MyEvents() {
             key: 'status',
             ...getColumnSearchProps('status'),
             render: (status) => (
-                <Badge 
-                    status={status === 'Published' ? 'success' : status === 'Draft' ? 'warning' : 'error'} 
-                    text={status} 
+                <Badge
+                    status={status === 'Published' ? 'success' : status === 'Draft' ? 'warning' : 'error'}
+                    text={status}
                 />
             )
         },
@@ -333,11 +331,11 @@ export default function MyEvents() {
             render: (_, record) => {
                 const isClosed = record.status === "Closed";
                 const isPublished = record.status === "Published";
-                
+
                 return (
                     <div className='d-flex justify-content-evenly align-items-center'>
-                        <Switch 
-                            className='ms-1' 
+                        <Switch
+                            className='ms-1'
                             unCheckedChildren={!isPublished && record.status}
                             disabled={isClosed}
                             loading={statusLoading}
@@ -346,16 +344,16 @@ export default function MyEvents() {
                             checked={isPublished}
                             onChange={() => handleStatus(record)}
                         />
-                        <Button 
-                            type='dashed' 
+                        <Button
+                            type='dashed'
                             onClick={() => { setOpenModal(true); setModalEventId(record?._id); }}
                             className='ms-1 d-flex align-items-center justify-content-center'
                             title="View Event"
                         >
                             <VisibilityTwoToneIcon fontSize='small' />
                         </Button>
-                        <Button 
-                            type='default' 
+                        <Button
+                            type='default'
                             disabled={isClosed}
                             onClick={() => navigate(`/dashboard/events/edit/${record?._id}`)}
                             className='ms-1 d-flex align-items-center justify-content-center'
@@ -382,16 +380,15 @@ export default function MyEvents() {
         },
     ];
 
-    // Columns for booked events (attendee view)
     const bookedEventsColumns = [
-        ...baseColumns.map((col, index) => ({ 
-            ...col, 
+        ...baseColumns.map((col, index) => ({
+            ...col,
             ...getColumnSearchProps(col.dataIndex),
             key: col.key || `booked-col-${index}`
         })),
         {
             title: 'Organizer',
-            dataIndex: ['organizer', 'name'], // Assuming organizer info is populated
+            dataIndex: ['organizer', 'name'],
             key: 'organizer',
             render: (text, record) => record.organizer?.name || record.organizer?.email || 'N/A'
         },
@@ -406,14 +403,10 @@ export default function MyEvents() {
             dataIndex: 'bookingStatus',
             key: 'bookingStatus',
             render: (status, record) => {
-                // Handle different possible status sources
                 const bookingStatus = status || record.status || 'confirmed';
                 const eventStatus = record.eventStatus || record.status;
-                
-                // Determine display status
                 let displayStatus = bookingStatus;
                 let badgeStatus = 'success';
-                
                 if (eventStatus === 'Closed' || eventStatus === 'Cancelled') {
                     displayStatus = 'Event Cancelled';
                     badgeStatus = 'error';
@@ -424,11 +417,10 @@ export default function MyEvents() {
                     displayStatus = 'Pending';
                     badgeStatus = 'processing';
                 }
-                
                 return (
-                    <Badge 
-                        status={badgeStatus} 
-                        text={displayStatus} 
+                    <Badge
+                        status={badgeStatus}
+                        text={displayStatus}
                     />
                 );
             }
@@ -441,11 +433,10 @@ export default function MyEvents() {
                 const now = new Date();
                 const isPastEvent = eventDate < now;
                 const isCancelled = record.bookingStatus === 'cancelled' || record.status === 'Closed';
-                
                 return (
                     <div className='d-flex justify-content-evenly align-items-center'>
-                        <Button 
-                            type='dashed' 
+                        <Button
+                            type='dashed'
                             onClick={() => { setOpenModal(true); setModalEventId(record?._id); }}
                             className='ms-1 d-flex align-items-center justify-content-center'
                             title="View Event"
@@ -462,8 +453,8 @@ export default function MyEvents() {
                                 okText="Yes, Cancel"
                                 cancelText="No"
                             >
-                                <Button 
-                                    type='default' 
+                                <Button
+                                    type='default'
                                     className='ms-1 d-flex align-items-center justify-content-center'
                                     title="Cancel Booking"
                                 >
@@ -472,8 +463,8 @@ export default function MyEvents() {
                             </Popconfirm>
                         )}
                         {isPastEvent && (
-                            <Button 
-                                type='dashed' 
+                            <Button
+                                type='dashed'
                                 disabled
                                 className='ms-1 d-flex align-items-center justify-content-center'
                                 title="Event has ended"
@@ -487,7 +478,6 @@ export default function MyEvents() {
         },
     ];
 
-    // Enhanced columns for payment history
     const paymentHistoryColumns = [
         {
             title: 'Event',
@@ -563,13 +553,12 @@ export default function MyEvents() {
             title: 'Actions',
             key: 'actions',
             render: (_, record) => {
-                // Use the processed eventId (which should be the actual ID string)
                 const eventId = record.eventId || record.eventObject?._id || record.eventObject?.id;
                 return (
                     <div className='d-flex justify-content-start align-items-center'>
                         {eventId ? (
-                            <Button 
-                                type='link' 
+                            <Button
+                                type='link'
                                 onClick={() => navigate(`/event/${eventId}`)}
                                 className='d-flex align-items-center justify-content-center'
                                 title="View Event"
@@ -589,16 +578,14 @@ export default function MyEvents() {
     const handleStatus = async (record) => {
         const statusMap = { "Published": "Draft", "Draft": "Published" };
         const newStatus = statusMap[record?.status];
-
         if (!newStatus) {
             return window.toastify(`Event is ${record?.status}. You can't change status`, "error");
         }
-
         setStatusLoading(true);
         try {
             const { data } = await updateEvent(record?._id, { status: newStatus });
             window.toastify(data?.msg, "success");
-            getCreatedEvents(); // Refresh created events
+            getCreatedEvents();
         } catch (error) {
             console.log(error);
             handleError(error);
@@ -609,9 +596,9 @@ export default function MyEvents() {
 
     const handleCancelBooking = async (record) => {
         try {
-            const { data } = await cancelBooking(record?._id); // Using your existing API
+            const { data } = await cancelBooking(record?._id);
             window.toastify(data?.msg || "Booking cancelled successfully", "success");
-            getBookedEventsData(); // Refresh booked events
+            getBookedEventsData();
         } catch (error) {
             console.log(error);
             handleError(error);
@@ -620,19 +607,15 @@ export default function MyEvents() {
 
     const extractPublicId = (imageUrl) => {
         if (!imageUrl?.includes("cloudinary.com")) return null;
-        
         const urlParts = imageUrl.split('/');
         const uploadIndex = urlParts.findIndex(part => part === 'upload');
-        
         if (uploadIndex === -1) return null;
-        
         const pathAfterUpload = urlParts.slice(uploadIndex + 2).join('/');
         return pathAfterUpload.split('.')[0];
     };
 
     const handleDelEvent = async (record) => {
         try {
-            // Delete image from Cloudinary if exists
             if (record?.image) {
                 const publicId = extractPublicId(record.image);
                 if (publicId) {
@@ -643,9 +626,8 @@ export default function MyEvents() {
                     }
                 }
             }
-            
             const { data } = await delEvent(record?._id);
-            getCreatedEvents(); // Refresh created events
+            getCreatedEvents();
             window.toastify(data?.msg, "success");
         } catch (error) {
             console.log(error);
@@ -653,14 +635,11 @@ export default function MyEvents() {
         }
     };
 
-    // Enhanced renderTabContent with debug info and empty states
     const renderTabContent = (events, columns) => {
-        // Add debug info for payment history
         if (activeTab === 'payments') {
             console.log('Rendering payment history with events:', events);
             console.log('Using columns:', columns.map(col => col.key));
         }
-        
         return (
             <div className="row">
                 <div className="col" style={{ overflow: "auto" }}>
@@ -685,18 +664,18 @@ export default function MyEvents() {
                             </p>
                         </div>
                     ) : (
-                        <Table 
-                            columns={columns} 
+                        <Table
+                            columns={columns}
                             dataSource={events}
                             rowKey={(record) => record.key || record._id || record.id}
                             pagination={{
                                 pageSize: 10,
                                 showSizeChanger: true,
                                 showQuickJumper: true,
-                                showTotal: (total, range) => 
+                                showTotal: (total, range) =>
                                     `${range[0]}-${range[1]} of ${total} ${activeTab === 'payments' ? 'payments' : 'events'}`
                             }}
-                            scroll={{ x: 800 }} // Add horizontal scroll for better mobile experience
+                            scroll={{ x: 800 }}
                         />
                     )}
                 </div>
@@ -704,7 +683,6 @@ export default function MyEvents() {
         );
     };
 
-    // Add error boundary for the payment history tab
     const PaymentHistoryTab = () => {
         try {
             return renderTabContent(paymentHistory, paymentHistoryColumns);
@@ -719,8 +697,8 @@ export default function MyEvents() {
                     <p className="text-muted">
                         There was an error loading your payment history. Please try again later.
                     </p>
-                    <Button 
-                        type="primary" 
+                    <Button
+                        type="primary"
                         onClick={() => getPaymentHistoryData()}
                         className="mt-2"
                     >
@@ -734,73 +712,70 @@ export default function MyEvents() {
     return (
         <div className="container">
             <h2 className='heading-stylling mb-5 pt-4'>MY EVENTS</h2>
-            
-            <Tabs 
-                activeKey={activeTab} 
+            <Tabs
+                activeKey={activeTab}
                 onChange={handleTabChange}
                 type="card"
                 className="mb-4"
             >
-                <TabPane 
+                <TabPane
                     tab={
                         <span>
                             <UserOutlined />
                             Events Created
                             <Badge count={createdEvents.length} style={{ marginLeft: 8 }} />
                             {userRole !== 'organizer' && (
-                                <span style={{ marginLeft: 4, fontSize: '10px', color: '#ff4d4f' }}>
-                                    (Organizers Only)
+                                <span style={{ marginLeft: 4, fontSize: '10px' }}>
+                                    <Tooltip title="Upgrade to an organizer account to create events">
+                                        <InfoCircleOutlined />
+                                    </Tooltip>
                                 </span>
                             )}
                         </span>
-                    } 
+                    }
                     key="created"
                     disabled={userRole !== 'organizer'}
                 >
-                    {userRole === 'organizer' ? (
-                        renderTabContent(createdEvents, createdEventsColumns)
-                    ) : (
-                        <div className="text-center py-5">
-                            <div className="mb-3">
-                                <UserOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
-                            </div>
-                            <h4>Organizer Access Required</h4>
-                            <p className="text-muted">
-                                Only organizers can create and manage events.
-                            </p>
-                        </div>
-                    )}
+                    {renderTabContent(createdEvents, createdEventsColumns)}
                 </TabPane>
-                
-                <TabPane 
+                <TabPane
                     tab={
                         <span>
                             <CalendarOutlined />
-                            Events Booked
+                            Booked Events
                             <Badge count={bookedEvents.length} style={{ marginLeft: 8 }} />
                         </span>
-                    } 
+                    }
                     key="booked"
                 >
                     {renderTabContent(bookedEvents, bookedEventsColumns)}
                 </TabPane>
-
-                <TabPane 
+                <TabPane
                     tab={
                         <span>
                             <CreditCardOutlined />
                             Payment History
                             <Badge count={paymentHistory.length} style={{ marginLeft: 8 }} />
                         </span>
-                    } 
+                    }
                     key="payments"
                 >
                     <PaymentHistoryTab />
                 </TabPane>
             </Tabs>
-
-            {openModal && <ViewEvent open={openModal} setOpen={setOpenModal} id={modalEventId} />}
-            {openCancelModal && <CancelEvent open={openCancelModal} setOpen={setOpenCancelModal} id={modalEventId} />}
+            {openModal && (
+                <ViewEvent
+                    open={openModal}
+                    handleClose={() => setOpenModal(false)}
+                    eventId={modalEventId}
+                />
+            )}
+            {openCancelModal && (
+                <CancelEvent
+                    open={openCancelModal}
+                    handleClose={() => setOpenCancelModal(false)}
+                />
+            )}
         </div>
     );
 }

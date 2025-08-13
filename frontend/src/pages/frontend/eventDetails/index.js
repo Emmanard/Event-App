@@ -16,7 +16,6 @@ import {
   validatePaymentData,
   calculateTotalCost,
   formatPaymentReference,
-  getPaymentStatusInfo,
   isEventBookable,
 } from "services/event";
 import Banner from "components/background/Banner";
@@ -52,7 +51,7 @@ const { Step } = Steps;
 export default function Index() {
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [event, setEvent] = useState({});
   const [bookingStatus, setBookingStatus] = useState(null);
@@ -72,7 +71,7 @@ export default function Index() {
   const commentRef = useRef(null);
   const [form] = Form.useForm();
 
-  useEffect(() => {
+ useEffect(() => {
     getEventData();
     addViewToEvent();
     if (user?._id) {
@@ -84,6 +83,7 @@ export default function Index() {
         phone: user.phone || "",
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const addViewToEvent = async () => {
@@ -106,19 +106,19 @@ export default function Index() {
     } catch (error) {
       console.log(error);
       let msg = "Some error occurred";
-      let { status, data } = error?.response;
-      if (
-        status == 400 ||
-        status == 401 ||
-        status == 500 ||
-        status == 413 ||
-        status == 404
-      ) {
-        msg = data.message || data.msg;
-        if (window.toastify) {
-          window.toastify(msg, "error");
-        }
-      }
+     let { status, data } = error?.response || {};
+if (
+  status === 400 ||
+  status === 401 ||
+  status === 500 ||
+  status === 413 ||
+  status === 404
+) {
+  msg = data?.message || data?.msg;
+  if (window.toastify) {
+    window.toastify(msg, "error");
+  }
+}
     } finally {
       setIsLoading(false);
     }

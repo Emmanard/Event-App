@@ -28,15 +28,7 @@ export default function RightCol({ event, user }) {
   const [costBreakdown, setCostBreakdown] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
 
-  const formatNumber = (num) => {
-    num = num ? num : 0;
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + "M";
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "K";
-    }
-    return num.toString();
-  };
+
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-NG", {

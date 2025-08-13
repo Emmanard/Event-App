@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import DashboardSidebar from 'components/dashboardSidebar'
 import DashboardHeader from 'components/dashboardHeader'
 import moment from 'moment';
-import Routes from './Routes';
+import DashboardRoutes from './Routes';
 
 const { Content, Footer } = Layout;
 
@@ -33,7 +33,7 @@ const App = () => {
             }}
           >
             {/* pages */}
-            <Routes />
+            <DashboardRoutes />
           </div>
 
           {/* dashboard footer */}

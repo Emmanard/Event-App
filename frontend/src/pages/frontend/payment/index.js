@@ -13,7 +13,6 @@ import Navbar from 'components/Navbar';
 import Footer from 'components/Footer';
 import { 
     completePaymentAndBooking, 
-    getPaymentStatus,
     formatPaymentReference,
     getPaymentStatusInfo 
 } from 'services/event';
@@ -71,13 +70,11 @@ export default function PaymentVerification() {
         }
     };
 
-    const handleGoToEvent = () => {
-        if (verificationResult?.booking?.eventId) {
-            navigate('/dashboard/events/myEvents');
-        } else {
-            navigate('/dashboard/events/myEvents');
-        }
-    };
+    // FIX APPLIED HERE
+ const handleGoToEvent= () => {
+    // Navigate to dashboard My Events with payments tab
+    navigate('/dashboard/events/myEvents?tab=payments');
+};
 
 
     const handleTryAgain = () => {

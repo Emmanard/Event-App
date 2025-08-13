@@ -1,3 +1,6 @@
+// SOLUTION 2: Use a simpler route path to avoid conflicts entirely
+
+// In your main routes file:
 import { Route, Routes } from "react-router-dom";
 import Home from "pages/frontend/home";
 import About from "pages/frontend/about";
@@ -10,6 +13,7 @@ import Categories from "pages/frontend/categories";
 import PrivateRoute from "components/privateRoute/PrivateRoute";
 import PaymentVerification from "./payment/index";
 import MyEvents from "./dashboard/events/MyEvents";
+import DashboardRoutes from './dashboard/Routes';
 
 export default function index() {
   return (
@@ -26,13 +30,15 @@ export default function index() {
           path="/event/:id"
           element={<PrivateRoute Component={EventDetails} />}
         />
-        {/* FIXED: Use element prop instead of component, and match the redirect URL */}
         <Route path="/payment-verification" element={<PaymentVerification />} />
-       
-         <Route path='/myEvents' element={<MyEvents />} />
-        {/* Optional: Add alternative route in case some systems use /payment/verify */}
         <Route path="/payment/verify" element={<PaymentVerification />} />
+        <Route 
+          path='/my-events' 
+          element={<PrivateRoute Component={MyEvents} />} 
+        />
+        <Route path="/dashboard/*" element={<PrivateRoute Component={DashboardRoutes} />} />
       </Routes>
     </>
   );
 }
+
