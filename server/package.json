@@ -8,7 +8,7 @@
     "start": "node index.js",
     "server": "nodemon index.js"
   },
-  "author": "",
+  "author": "Emmanard",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.11.0",
