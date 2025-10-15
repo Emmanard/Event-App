@@ -1,6 +1,6 @@
-# 🎉 EventSphere – Event Management Platform
+# 🎉 EventWave – Event Management Platform
 
-EventSphere is a comprehensive full-stack event management platform built with the MERN stack. It empowers users to discover, create, and manage events seamlessly while providing organizers with powerful tools to track engagement and attendance.
+EventWave is a comprehensive full-stack event management platform built with the MERN stack. It empowers users to discover, create, and manage events seamlessly while providing organizers with powerful tools to track engagement and attendance.
 
 ## ✨ Key Features
 
@@ -204,7 +204,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-  <p>Built with ❤️ by the EventSphere Team</p>
+  <p>Built with ❤️ by the EventWave Team</p>
   <p>
     <a href="#-eventsphere--event-management-platform">🔝 Back to top</a>
   </p>

@@ -2,90 +2,70 @@ const express = require('express');
 const cors = require("cors");
 const bodyParser = require('body-parser');
 
-// Fixed dotenv configuration - works both locally and on Render
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config({ path: "./config/.env" });
 }
-// On Render (production), environment variables are already available
 
 const cloudinaryRoutes = require('./routes/cloudinary');
-// database
 const connectDB = require('./config/db');
-// middleware
 const errorHandler = require('./middlewares/errorHandlrer');
-// cron jobs
-var cron = require('node-cron');
 const CheckEventStatus = require('./crobJob/Event');
-// routes
 const authRoutes = require('./routes/user');
 const eventRoutes = require('./routes/eventRoutes');
-const paymentRoutes = require('./routes/paymentRoutes'); // ADD THIS LINE
+const paymentRoutes = require('./routes/paymentRoutes');
 
-// port
 const port = process.env.PORT || 5000;
-
 connectDB();
+
 const app = express();
 app.use(cors());
-// app.use(express.json());
 app.use(express.json({ limit: '5mb' }));
-// app.use(express.urlencoded({ extended: false }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use(express.static("public"));
 
+// ✅ API key middleware
 app.use(async (req, res, next) => {
-    // More flexible header reading - checks multiple common formats
-    const apikey = req.headers.apikey ||
-                    req.headers['api-key'] ||
-                    req.headers['x-api-key'] ||
-                   req.headers.authorization?.replace('Bearer ', '');
-    
+    const apikey =
+        req.headers.apikey ||
+        req.headers['api-key'] ||
+        req.headers['x-api-key'] ||
+        req.headers.authorization?.replace('Bearer ', '');
+
     const expectedApiKey = process.env.apikey;
-    
-    console.log('=== API Key Debug ===');
-    console.log('Request URL:', req.url);
-    console.log('Request Method:', req.method);
-    console.log('Received API key:', apikey);
-    console.log('Expected API key:', expectedApiKey);
-    console.log('API key types:', typeof apikey, typeof expectedApiKey);
-    console.log('API keys match (strict):', apikey === expectedApiKey);
-    console.log('API keys match (loose):', apikey == expectedApiKey);
-    console.log('==================');
-    
-    // Check if API key is provided
+
     if (!apikey) {
-        console.log('❌ No API key provided');
         return res.status(401).json({ success: false, message: 'API key is required' });
     }
-    
-    // Convert both to strings and trim whitespace for comparison
-    const normalizedApiKey = String(apikey).trim();
-    const normalizedExpectedKey = String(expectedApiKey).trim();
-    
-    if (normalizedApiKey === normalizedExpectedKey) {
-        console.log('✅ API key validation passed');
+
+    if (String(apikey).trim() === String(expectedApiKey).trim()) {
         return next();
     }
-    
-    console.log('❌ API key validation failed');
-    console.log('Normalized received:', normalizedApiKey);
-    console.log('Normalized expected:', normalizedExpectedKey);
-    
-    // Return 401 instead of 404 for unauthorized access
+
     return res.status(401).json({ success: false, message: 'Invalid API key' });
 });
 
-// node cron
-cron.schedule('* * * * *', CheckEventStatus);
-
+// ✅ Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/event', eventRoutes);
-app.use('/api/v1/payments', paymentRoutes); // ADD THIS LINE
+app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/cloudinary', cloudinaryRoutes);
+
+// ✅ Manual trigger for event status check (for Vercel)
+app.get('/api/v1/check-events', async (req, res) => {
+    console.log("🔄 Manual event status check triggered");
+    await CheckEventStatus(req, res);
+});
+
+// ✅ Root
 app.use('/', (req, res) => {
-    res.status(200).json({ msg: "helloo" })
+    res.status(200).json({ msg: "Hello from Event API!" });
 });
 
 app.use(errorHandler);
 
-app.listen(port, () => console.log(`server is listening on port ${port}`));
+// 🚀 For Vercel, export app instead of listening
+if (process.env.VERCEL) {
+    module.exports = app;
+} else {
+    app.listen(port, () => console.log(`Server running on port ${port}`));
+}
