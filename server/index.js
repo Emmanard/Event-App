@@ -15,7 +15,6 @@ const eventRoutes = require('./routes/eventRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 
 const port = process.env.PORT || 5000;
-connectDB();
 
 const app = express();
 app.use(cors());
@@ -26,6 +25,25 @@ app.use(express.static("public"));
 // ✅ Health check endpoint (no API key required)
 app.get('/api/health', (req, res) => {
   res.send('✅ EventWave backend is live on Vercel!');
+});
+
+// ✅ Ensure DB connection before handling requests
+app.use(async (req, res, next) => {
+    // Skip DB connection for health check
+    if (req.path === '/api/health') {
+        return next();
+    }
+    
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error('❌ DB connection middleware error:', error.message);
+        return res.status(503).json({ 
+            success: false, 
+            message: 'Database temporarily unavailable, please try again' 
+        });
+    }
 });
 
 // ✅ API key middleware (skip for health check)
@@ -72,6 +90,9 @@ app.use('/', (req, res) => {
 });
 
 app.use(errorHandler);
+
+// 🚀 Initialize DB connection on startup (non-blocking)
+connectDB().catch(err => console.error('❌ Initial DB connection failed:', err));
 
 // 🚀 For Vercel, export app instead of listening
 if (process.env.VERCEL) {
