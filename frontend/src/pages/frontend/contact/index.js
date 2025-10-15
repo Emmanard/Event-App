@@ -1,6 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import Navbar from 'components/Navbar'
 import Footer from 'components/Footer'
+import { message } from 'antd'
+import emailjs from '@emailjs/browser'
+
+const CONTACT_INFO = {
+    address: "Lagos, Nigeria",
+    phone: "+2348086804544",
+    email: "emmanuelomunizua@gmail.com",
+    businessHours: {
+        weekdays: "Monday - Friday: 9:00 AM - 6:00 PM",
+        saturday: "Saturday: 10:00 AM - 2:00 PM", 
+        sunday: "Sunday: Closed"
+    }
+}
 
 export default function Contact() {
     const [formData, setFormData] = useState({
@@ -9,15 +22,46 @@ export default function Contact() {
         subject: '',
         message: ''
     })
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
-        window.scroll(0, 0);
+        window.scroll(0, 0)
+        
+        // Initialize EmailJS once when component mounts
+        emailjs.init(process.env.REACT_APP_EMAILJS_PUBLIC_KEY)
     }, [])
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        console.log('Contact form submitted:', formData)
-        // Add your contact form submission logic here
+        setIsSubmitting(true)
+
+        try {
+            // Send email using EmailJS
+            await emailjs.send(
+                process.env.REACT_APP_EMAILJS_SERVICE_ID,
+                process.env.REACT_APP_EMAILJS_TEMPLATE_ID,
+                {
+                    from_name: formData.name,
+                    from_email: formData.email,
+                    subject: formData.subject,
+                    message: formData.message,
+                    to_email: CONTACT_INFO.email
+                }
+            )
+
+            message.success('Message sent successfully!')
+            setFormData({ name: '', email: '', subject: '', message: '' })
+        } catch (error) {
+            console.error('Error sending message:', error)
+            
+            if (error.text) {
+                message.error(`Failed to send: ${error.text}`)
+            } else {
+                message.error('Failed to send message. Please check your EmailJS configuration.')
+            }
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const handleChange = (e) => {
@@ -52,6 +96,7 @@ export default function Contact() {
                                             value={formData.name}
                                             onChange={handleChange}
                                             required
+                                            disabled={isSubmitting}
                                         />
                                     </div>
                                     <div className="mb-3">
@@ -63,6 +108,7 @@ export default function Contact() {
                                             value={formData.email}
                                             onChange={handleChange}
                                             required
+                                            disabled={isSubmitting}
                                         />
                                     </div>
                                     <div className="mb-3">
@@ -74,6 +120,7 @@ export default function Contact() {
                                             value={formData.subject}
                                             onChange={handleChange}
                                             required
+                                            disabled={isSubmitting}
                                         />
                                     </div>
                                     <div className="mb-3">
@@ -85,10 +132,15 @@ export default function Contact() {
                                             value={formData.message}
                                             onChange={handleChange}
                                             required
+                                            disabled={isSubmitting}
                                         ></textarea>
                                     </div>
-                                    <button type="submit" className="button-stylling-1 px-4">
-                                        Send Message
+                                    <button 
+                                        type="submit" 
+                                        className="button-stylling-1 px-4"
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? 'Sending...' : 'Send Message'}
                                     </button>
                                 </form>
                             </div>
@@ -98,21 +150,31 @@ export default function Contact() {
                                 <h4>Contact Information</h4>
                                 <div className="mb-3">
                                     <h6>Address</h6>
-                                    <p>123 Event Street, City, State 12345</p>
+                                    <p>{CONTACT_INFO.address}</p>
                                 </div>
                                 <div className="mb-3">
                                     <h6>Phone</h6>
-                                    <p>+1 (555) 123-4567</p>
+                                    <p>
+                                        <a href={`tel:${CONTACT_INFO.phone}`}>
+                                            {CONTACT_INFO.phone}
+                                        </a>
+                                    </p>
                                 </div>
                                 <div className="mb-3">
                                     <h6>Email</h6>
-                                    <p>info@eventwave.com</p>
+                                    <p>
+                                        <a href={`mailto:${CONTACT_INFO.email}`}>
+                                            {CONTACT_INFO.email}
+                                        </a>
+                                    </p>
                                 </div>
                                 <div className="mb-3">
                                     <h6>Business Hours</h6>
-                                    <p>Monday - Friday: 9:00 AM - 6:00 PM<br />
-                                       Saturday: 10:00 AM - 4:00 PM<br />
-                                       Sunday: Closed</p>
+                                    <p>
+                                        {CONTACT_INFO.businessHours.weekdays}<br />
+                                        {CONTACT_INFO.businessHours.saturday}<br />
+                                        {CONTACT_INFO.businessHours.sunday}
+                                    </p>
                                 </div>
                             </div>
                         </div>
