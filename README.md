@@ -53,7 +53,7 @@ EventWave is a comprehensive full-stack event management platform built with the
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/eventsphere.git
+   git clone https://github.com/Emmanard/Event-App/
    cd eventsphere
    ```
 
@@ -197,9 +197,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙋‍♂️ Support
 
-- 📧 Email: support@eventsphere.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/eventsphere/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/eventsphere/discussions)
+- 📧 Email: emmanuelomunizua@gmail.com
+chimavalentine11@gmail.com
+- 
 
 ---
 
